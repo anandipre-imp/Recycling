@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Who We Are — Imperial Recycling</title>
 <meta name="description" content="Founded in 2013, Imperial Recycling works towards a waste-free future through innovation, integrity, an ethical work culture and premium recycled products.">
-<meta name="theme-color" content="#93cc2c">
+<meta name="theme-color" content="#1f4b36">
 <meta property="og:title" content="Who We Are — Imperial Recycling">
 <meta property="og:description" content="Founded in 2013, Imperial Recycling works towards a waste-free future through innovation, integrity, an ethical work culture and premium recycled products.">
 <meta property="og:type" content="website">
 <link rel="icon" href="assets/img/mark.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -20,7 +20,7 @@
 <header class="site-header">
   <div class="container header-inner">
     <a class="brand" href="index.html" aria-label="Imperial Recycling — home">
-      <img class="brand-logo" src="assets/img/logo.png" alt="Imperial Recycling" width="543" height="120">
+      <span class="brand-chip"><img src="assets/img/logo.png" alt="Imperial Recycling" width="543" height="120"></span>
     </a>
     <button class="menu-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="site-nav"><span></span></button>
     <nav class="nav" id="site-nav" aria-label="Main">
@@ -32,7 +32,8 @@
   </div>
 </header>
 <main id="main">
-<section class="page-hero">
+<section class="page-hero on-dark">
+  <div class="hero-bg"></div><div class="hero-grid"></div>
   <div class="container">
     <span class="eyebrow reveal">About Imperial Recycling</span>
     <h1 class="reveal" data-delay="1">Who <em>we are</em></h1>
@@ -54,15 +55,15 @@
       <div class="split-visual">
         <svg viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eaf3d2"/><stop offset="1" stop-color="#c9e39a"/></linearGradient>
-    <linearGradient id="bar" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8fb51a"/><stop offset=".5" stop-color="#d6e45a"/><stop offset="1" stop-color="#5cc93b"/></linearGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2d6249"/><stop offset="1" stop-color="#1f4b36"/></linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4f7d18"/><stop offset=".5" stop-color="#d4ea8c"/><stop offset="1" stop-color="#4f7d18"/></linearGradient>
     <linearGradient id="cu" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7a3f22"/><stop offset=".5" stop-color="#d08a5c"/><stop offset="1" stop-color="#7a3f22"/></linearGradient>
     <linearGradient id="al" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6b726f"/><stop offset=".5" stop-color="#d9dcd8"/><stop offset="1" stop-color="#6b726f"/></linearGradient>
   </defs>
   <rect width="400" height="500" fill="url(#bg)"/>
-  <g opacity=".35" stroke="#ffffff"><path d="M0 100h400M0 200h400M0 300h400M100 0v500M200 0v500M300 0v500"/></g>
-  <circle cx="300" cy="120" r="90" fill="#ffffff" fill-opacity=".45"/>
-  <circle cx="300" cy="120" r="60" fill="none" stroke="#5cc93b" stroke-opacity=".6" stroke-dasharray="2 5"/>
+  <g opacity=".14" stroke="#b9d65c"><path d="M0 100h400M0 200h400M0 300h400M100 0v500M200 0v500M300 0v500"/></g>
+  <circle cx="300" cy="120" r="90" fill="none" stroke="#b9d65c" stroke-opacity=".35"/>
+  <circle cx="300" cy="120" r="60" fill="none" stroke="#b9d65c" stroke-opacity=".2" stroke-dasharray="2 5"/>
   <g transform="translate(60 210)">
     <path d="M0 150h280l-30-40H30z" fill="url(#al)" opacity=".85"/>
     <path d="M30 110h220l-26-36H56z" fill="url(#cu)" opacity=".9"/>
@@ -76,7 +77,7 @@
   </div>
 </section>
 
-<section class="section tint">
+<section class="section dark on-dark">
   <div class="container">
     <div class="section-head">
       <div>
@@ -109,7 +110,7 @@
   </div>
 </section>
 
-<section class="section brand">
+<section class="section deep on-dark">
   <div class="container">
     <div class="section-head">
       <div>
@@ -143,7 +144,7 @@
   <div class="container cta-inner">
     <h2 class="reveal">Have scrap to sell, or material to <em>source</em>?</h2>
     <div class="cta-side reveal" data-delay="1">
-      <p>Send all your queries to <a href="mailto:peeyush@imperialrecycling.co">peeyush@imperialrecycling.co</a> or call our Panama headquarters on <a href="tel:+5073140841">+507 314 0841</a>.</p>
+      <p>Send all your queries to <a href="mailto:peeyush@imperialrecycling.co" style="color:#d4ea8c">peeyush@imperialrecycling.co</a> or call our Panama headquarters on <a href="tel:+5073140841" style="color:#d4ea8c">+507 314 0841</a>.</p>
       <a class="btn btn-gold" href="contact.html">Contact Us <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></a>
     </div>
   </div>
@@ -155,20 +156,9 @@
     <div class="footer-top">
       <div class="footer-about">
         <a class="brand" href="index.html" aria-label="Imperial Recycling — home">
-          <img class="brand-logo" src="assets/img/logo.png" alt="Imperial Recycling" width="543" height="120">
+          <span class="footer-plate"><img src="assets/img/brand-plate.png" alt="Imperial Recycling — Transforming Waste to Possibilities. Member: ISRI, MRAI, BIR Gold Member" width="580" height="352" loading="lazy"></span>
         </a>
-        <p class="tagline">Transforming Waste to Possibilities</p>
         <p>A recycling company dealing with various forms of ferrous and non-ferrous metals, paper and plastics. Our main goal is zero waste.</p>
-        <div class="members" aria-label="Member of ISRI, MRAI and BIR (Gold Member)">
-  <span class="members-label">Member</span>
-  <div class="members-row">
-    <img src="assets/img/isri.png" alt="ISRI" width="134" height="63">
-    <span class="sep" aria-hidden="true"></span>
-    <img class="mrai" src="assets/img/mrai.png" alt="MRAI" width="69" height="69">
-    <span class="sep" aria-hidden="true"></span>
-    <img src="assets/img/bir.png" alt="BIR Gold Member" width="150" height="60">
-  </div>
-</div>
       </div>
       <div>
         <h4>Explore</h4>
@@ -199,10 +189,11 @@
         </ul>
       </div>
     </div>
+    <div class="footer-big" aria-hidden="true">Imperial</div>
   </div>
   <div class="container footer-bottom">
     <span>© <span data-year>2024</span> Imperial Recycling. All rights reserved.</span>
-    <span>Transforming Waste to Possibilities</span>
+    <span>Towards a waste-free future.</span>
   </div>
 </footer>
 <script src="assets/js/main.js"></script>
