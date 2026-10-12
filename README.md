@@ -19,3 +19,11 @@ python3 -m http.server 8000
 ```
 
 Deploy by uploading the whole folder to any static host (Netlify, Vercel, GitHub Pages, cPanel).
+
+## Brand files
+`brand/` holds the logo recreated as vectors from the company business card:
+- `imperial-recycling-logo.svg` — iR mark + wordmark (transparent background)
+- `imperial-recycling-brand-plate.svg` — logo, tagline and the ISRI / MRAI / BIR Gold Member strip
+- `@6x.png` versions of both for documents and social media
+
+The site uses the SVGs from `assets/img/`.
