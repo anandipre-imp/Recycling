@@ -27,3 +27,7 @@ Deploy by uploading the whole folder to any static host (Netlify, Vercel, GitHub
 - `@6x.png` versions of both for documents and social media
 
 The site uses the SVGs from `assets/img/`.
+
+## Clip Matcher iPhone app
+`GalleryMatcher/` holds a separate project: an iPhone app that analyzes the videos in your camera roll on-device,
+groups the ones that go together and suggests short videos to make from them. See `GalleryMatcher/README.md`.

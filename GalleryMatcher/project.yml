@@ -1,0 +1,49 @@
+# Xcode project spec for XcodeGen (https://github.com/yonaskolb/XcodeGen).
+# Generate the project with:  brew install xcodegen && xcodegen generate
+name: GalleryMatcher
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  GalleryMatcher:
+    type: application
+    platform: iOS
+    sources: [GalleryMatcher]
+    info:
+      path: GalleryMatcher/Info.plist
+      properties:
+        CFBundleDisplayName: Clip Matcher
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NSPhotoLibraryUsageDescription: Clip Matcher looks at your videos on this iPhone to find clips that go together. Your videos never leave your device.
+        NSPhotoLibraryAddUsageDescription: Clip Matcher saves the videos you make to your photo library.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.clipmatcher
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+        # Set this to your Apple Developer Team ID (or pick your team in Xcode > Signing & Capabilities).
+        DEVELOPMENT_TEAM: ""
+  GalleryMatcherTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [GalleryMatcherTests]
+    dependencies:
+      - target: GalleryMatcher
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  GalleryMatcher:
+    build:
+      targets:
+        GalleryMatcher: all
+    test:
+      targets: [GalleryMatcherTests]
