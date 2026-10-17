@@ -14,6 +14,14 @@ struct VideoCluster: Identifiable, Hashable {
     var endDate: Date? { members.compactMap(\.creationDate).max() }
     var totalDuration: Double { members.reduce(0) { $0 + $1.duration } }
 
+    /// Average location of the members that have one.
+    var center: (latitude: Double, longitude: Double)? {
+        let located = members.compactMap { m in m.latitude.flatMap { lat in m.longitude.map { (lat, $0) } } }
+        guard !located.isEmpty else { return nil }
+        let n = Double(located.count)
+        return (located.reduce(0) { $0 + $1.0 } / n, located.reduce(0) { $0 + $1.1 } / n)
+    }
+
     /// The labels that best describe the group as a whole.
     func topLabels(_ count: Int = 5) -> [String] {
         var weight: [String: Float] = [:]

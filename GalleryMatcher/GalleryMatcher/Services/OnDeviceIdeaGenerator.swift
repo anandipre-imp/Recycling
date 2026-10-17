@@ -50,11 +50,25 @@ struct OnDeviceIdeaGenerator: ContentIdeaGenerator {
 }
 #endif
 
-enum IdeaGenerators {
-    static func makeDefault() -> any ContentIdeaGenerator {
-        let base = RuleBasedIdeaGenerator()
+enum AppleIntelligence {
+    /// True only on phones that have Apple Intelligence turned on and ready
+    /// (iPhone 15 Pro and newer, iOS 26+, supported language/region).
+    static var isAvailable: Bool {
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
+            return SystemLanguageModel.default.isAvailable
+        }
+        #endif
+        return false
+    }
+}
+
+enum IdeaGenerators {
+    /// Every phone gets the template writer; Apple Intelligence only polishes on top of it.
+    static func make(useAppleIntelligence: Bool, places: (any PlaceNaming)?) -> any ContentIdeaGenerator {
+        let base = RuleBasedIdeaGenerator(places: places)
+        #if canImport(FoundationModels)
+        if useAppleIntelligence, #available(iOS 26.0, *), AppleIntelligence.isAvailable {
             return OnDeviceIdeaGenerator(base: base)
         }
         #endif

@@ -41,13 +41,25 @@ final class LibraryModel {
     private(set) var matchCount = 0
     private(set) var isSearching = false
     private(set) var exportState: ExportState = .idle
+    /// Whether the current ideas were polished by Apple Intelligence (for the UI label).
+    private(set) var ideasUsedAppleIntelligence = false
+
+    /// Lets people with Apple Intelligence still choose the standard writer — and lets us
+    /// test what phones without it see.
+    var useAppleIntelligence = UserDefaults.standard.object(forKey: "useAppleIntelligence") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(useAppleIntelligence, forKey: "useAppleIntelligence") }
+    }
+    var usePlaceNames = UserDefaults.standard.object(forKey: "usePlaceNames") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(usePlaceNames, forKey: "usePlaceNames") }
+    }
+    let appleIntelligenceAvailable = AppleIntelligence.isAvailable
 
     private let library = PhotoLibraryService()
     private let store = AnalysisStore()
     private let analyzer = VideoAnalyzer()
     private let matcher = QueryMatcher(similarity: EmbeddingSimilarity())
     private let clusterer = Clusterer()
-    private let ideaGenerator = IdeaGenerators.makeDefault()
+    private let placeNamer = PlaceNamer()
 
     private var assetsByID: [String: PHAsset] = [:]
     private var orderedIDs: [String] = []
@@ -167,7 +179,12 @@ final class LibraryModel {
 
         lastQuery = query
         matchCount = ranked.count
-        ideas = await ideaGenerator.ideas(for: clusters, query: query)
+        let generator = IdeaGenerators.make(
+            useAppleIntelligence: useAppleIntelligence,
+            places: usePlaceNames ? (placeNamer as any PlaceNaming) : nil
+        )
+        ideas = await generator.ideas(for: clusters, query: query)
+        ideasUsedAppleIntelligence = useAppleIntelligence && appleIntelligenceAvailable
     }
 
     /// Groups across the most recent videos, for browsing without a query.

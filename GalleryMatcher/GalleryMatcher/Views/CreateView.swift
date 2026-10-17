@@ -43,10 +43,15 @@ struct CreateView: View {
                             : "Try different words, like a place, an activity or an animal.")
                     )
                 } else {
-                    Section("\(model.matchCount) matching videos · \(model.ideas.count) ideas") {
+                    Section {
                         ForEach(model.ideas) { idea in
                             IdeaCard(idea: idea)
                         }
+                    } header: {
+                        Text("\(model.matchCount) matching videos · \(model.ideas.count) ideas")
+                    } footer: {
+                        Label(model.ideasUsedAppleIntelligence ? "Titles written with Apple Intelligence" : "Titles written on this iPhone",
+                              systemImage: model.ideasUsedAppleIntelligence ? "sparkles" : "text.badge.star")
                     }
                 }
             }

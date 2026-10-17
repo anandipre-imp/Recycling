@@ -149,3 +149,33 @@ final class IdeaTests: XCTestCase {
         XCTAssertEqual(decoded, original)
     }
 }
+
+final class IdeaWriterTests: XCTestCase {
+    private func context(theme: String, place: String? = nil, date: Date? = nil, seed: Int) -> IdeaWriter.Context {
+        IdeaWriter.Context(
+            theme: Themes.all.first { $0.name == theme } ?? Themes.fallback,
+            place: place, startDate: date, clipCount: 8, hasPeople: false, seed: seed
+        )
+    }
+
+    func testNeverLeavesPlaceholdersWhenDataIsMissing() {
+        for theme in Themes.all + [Themes.fallback] {
+            for seed in 0..<10 {
+                let c = context(theme: theme.name, seed: seed)
+                XCTAssertFalse(IdeaWriter.title(c).contains("{"), "\(theme.name) title")
+                XCTAssertFalse(IdeaWriter.hook(c).contains("{"), "\(theme.name) hook")
+            }
+        }
+    }
+
+    func testUsesPlaceWhenKnown() {
+        let titles = (0..<10).map { IdeaWriter.title(context(theme: "travel", place: "Lisbon", date: Date(), seed: $0)) }
+        XCTAssertTrue(titles.contains { $0.contains("Lisbon") })
+    }
+
+    func testVariesBetweenGroupsButIsStablePerGroup() {
+        let titles = Set((0..<10).map { IdeaWriter.title(context(theme: "food", place: "Rome", date: Date(), seed: $0)) })
+        XCTAssertGreaterThan(titles.count, 1)
+        XCTAssertEqual(IdeaWriter.seed(for: ["a", "b"]), IdeaWriter.seed(for: ["a", "b"]))
+    }
+}

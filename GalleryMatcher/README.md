@@ -5,10 +5,15 @@ groups the ones that belong together, and — when you type what you want to mak
 ("beach trip reel", "my dog compilation", "YouTube travel vlog") — suggests videos you could
 make and cuts them for you.
 
-**Everything runs on the iPhone.** Videos are analyzed with Apple's built-in, on-device AI
-(Vision and Natural Language frameworks, plus Apple Intelligence on iOS 26+ when available).
-No video, frame or tag is uploaded anywhere. This matters for the App Store review and for users'
-trust once it's published.
+**Works on every iPhone that runs iOS 17 (iPhone XS / XR and newer).** Video analysis uses Apple's
+Vision and Natural Language frameworks, which every one of those phones has — Apple Intelligence
+is *not* needed. Titles and hooks come from a built-in template writer (several variants per
+theme, filled with the place, month and clip count). On phones that do have Apple Intelligence
+(iPhone 15 Pro and newer, iOS 26+, switched on) it polishes that copy; there's a toggle in the
+Library tab to turn it off and see exactly what other phones get.
+
+**Your videos never leave the phone.** The only thing sent anywhere is a GPS position to Apple
+Maps to get a place name for titles, and that can be switched off.
 
 ## What it does
 
@@ -61,12 +66,14 @@ GalleryMatcher/
     Clusterer.swift       groups videos by look / time / place
     ClipPlanner.swift     picks which seconds of each video to use
     ContentIdeas.swift    turns groups into ideas (title, hook, clips)
+    IdeaWriter.swift      title/hook templates — the writer every iPhone uses
   Services/   iPhone-specific pieces
     PhotoLibraryService   Photos access, thumbnails, saving
     VideoAnalyzer         on-device Vision analysis of sampled frames
     AnalysisStore         on-device cache of results
     EmbeddingSimilarity   meaning-based word matching ("puppy" ≈ "dog")
-    OnDeviceIdeaGenerator Apple Intelligence titles/hooks (iOS 26+, falls back automatically)
+    OnDeviceIdeaGenerator Apple Intelligence polish (only where available; optional)
+    PlaceNamer            GPS position -> town name for titles
     CompilationExporter   stitches clips into the final video
   Views/      SwiftUI screens
 GalleryMatcherTests/      unit tests for Core
@@ -80,9 +87,10 @@ Tuning knobs worth playing with once you see real results:
 
 Things to add before an App Store release, roughly in order:
 
-- **Smarter AI ideas:** plug a cloud model (e.g. Claude) in behind `ContentIdeaGenerator`, sending
-  only the text tags, never the videos, through your own small backend so the API key isn't in the
-  app. Make it opt-in and say so in the privacy policy.
+- **Smarter AI ideas on every phone:** Apple Intelligence only exists on recent Pro/16-series
+  phones. To give every user LLM-quality ideas, plug a cloud model (e.g. Claude) in behind
+  `ContentIdeaGenerator`, sending only the text tags, never the videos, through your own small
+  backend so the API key isn't in the app. Make it opt-in and say so in the privacy policy.
 - **Audio understanding:** Apple's SoundAnalysis framework can tag music, laughter, speech, crowds —
   useful for picking highlight moments and for queries like "funny moments".
 - **Better editing:** music with beat-synced cuts, transitions, on-screen hook text, letting the

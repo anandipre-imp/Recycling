@@ -7,6 +7,7 @@ struct LibraryView: View {
     @State private var confirmReset = false
 
     var body: some View {
+        @Bindable var model = model
         NavigationStack {
             List {
                 Section {
@@ -49,6 +50,19 @@ struct LibraryView: View {
                             ClusterRow(cluster: group)
                         }
                     }
+                }
+
+                Section {
+                    Toggle("Use Apple Intelligence", isOn: $model.useAppleIntelligence)
+                        .disabled(!model.appleIntelligenceAvailable)
+                    Toggle("Place names in titles", isOn: $model.usePlaceNames)
+                } header: {
+                    Text("Idea writing")
+                } footer: {
+                    Text(model.appleIntelligenceAvailable
+                        ? "Apple Intelligence polishes titles and hooks. Turn it off to see what phones without it get."
+                        : "Apple Intelligence isn't available on this iPhone, so ideas are written by the app's built-in writer. Everything else works the same.")
+                    + Text(" Place names send only a GPS position to Apple Maps, never your videos.")
                 }
 
                 Section {
