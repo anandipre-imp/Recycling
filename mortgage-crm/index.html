@@ -741,8 +741,8 @@ function detailTab(a,c){
     if(!a.cto) return `<p class="muted" style="margin:0">No CTO / ADB assessment yet. Upload the bank statements in Documents below, or in the calculator. CTO, ADB and each bank's result are then calculated automatically.</p><a class="btn primary" href="#cto-${a.id}" style="justify-self:start">${ic('bolt')}Run CTO / ADB assessment</a>`;
     const r=a.cto;
     return `<div class="row spread"><span class="muted small">Calculated ${rel(r.at)} from ${r.files&&r.files.length?r.files.length+' statement'+(r.files.length>1?'s':''):'monthly figures'} · ${r.months} months</span><a class="btn" href="#cto-${a.id}">Open calculator</a></div>
-      <div class="scroll bordered"><table class="tbl-sm"><thead><tr><th>Bank</th><th class="r">Eligible CTO</th><th class="r">ADB</th><th class="r">Max loan</th><th>Result</th></tr></thead><tbody>
-      ${r.rows.map(x=>`<tr><td>${esc(bank(x.bankId).short)}</td><td class="r num">${fmt(x.cto)}</td><td class="r num">${fmt(x.adb)}</td><td class="r num"><b>${x.maxLoan?fmt(x.maxLoan):'—'}</b></td><td>${ctoPill(x.status)}</td></tr>`).join('')}</tbody></table></div>`;
+      <div class="scroll bordered"><table class="tbl-sm"><thead><tr><th>Bank</th><th class="r">Total eligible CTO</th><th class="r">ADB</th><th class="r">Max loan</th><th>Result</th></tr></thead><tbody>
+      ${r.rows.map(x=>`<tr><td>${esc(bank(x.bankId).short)}</td><td class="r num">${x.ctoTotal?fmt(x.ctoTotal)+`<div class="small muted">${x.nMonths} months</div>`:(x.cto?fmt(x.cto)+'<div class="small muted">per month</div>':'—')}</td><td class="r num">${fmt(x.adb)}</td><td class="r num"><b>${x.maxLoan?fmt(x.maxLoan):'—'}</b></td><td>${ctoPill(x.status)}</td></tr>`).join('')}</tbody></table></div>`;
   }
   const p=S.products.find(x=>x.id===a.productId), br=user(a.brokerId);
   const base=`<div class="kv">
@@ -1196,14 +1196,14 @@ function ctoCalc(b){
   const use=all.slice(-b.months);
   res.period=mLabel(use[0].key)+' – '+mLabel(use[use.length-1].key);
   res.avgTotal=mean(use.map(m=>m.total));res.avgExcl=mean(use.map(m=>m.own+m.loan+m.returns+m.cash*(1-b.cash/100)));
-  res.cto=mean(use.map(m=>m.total-m.own-m.loan-m.returns-m.cash*(1-b.cash/100)));
+  const elig=use.map(m=>m.total-m.own-m.loan-m.returns-m.cash*(1-b.cash/100));res.cto=mean(elig);res.ctoTotal=elig.reduce((a,x)=>a+x,0);res.totalCredits=use.reduce((a,m)=>a+m.total,0);res.totalExcl=res.totalCredits-res.ctoTotal;res.nMonths=use.length;
   res.adb=b.adb==='daily'?mean(use.map(m=>m.adbDaily)):b.adb==='monthEnd'?mean(use.map(m=>m.adbEnd)):(CT.source==='statement'?mean(use.map(m=>CT.daily[m.key]?fixedAvg(CT.daily[m.key],b.dates):m.adbFixed)):mean(use.map(m=>m.adbFixed)));
   res.rc=use.reduce((a,m)=>a+(+m.rc||0),0);
   res.incCto=res.cto*b.ctoPct/100;res.incAdb=res.adb*b.adbPct/100;
   res.gross=b.basis==='cto'?res.incCto:b.basis==='adb'?res.incAdb:b.basis==='min'?Math.min(res.incCto,res.incAdb):Math.max(res.incCto,res.incAdb);
   res.income=res.gross*p.share/100;res.liab=p.emis+p.cards*0.05;res.maxEmi=res.income*b.dbr/100-res.liab;res.years=Math.min(p.tenure,b.tenure);
   res.maxLoan=loanFromEmi(res.maxEmi,b.rate,res.years*12);
-  if(res.cto<b.minCto)res.reasons.push(`Avg CTO below bank minimum of ${fmt(b.minCto)}`);
+  if(res.cto<b.minCto)res.reasons.push(`Monthly CTO (${fmt(res.cto)}) below bank minimum of ${fmt(b.minCto)}`);
   if(res.adb<b.minAdb)res.reasons.push(`ADB below bank minimum of ${fmt(b.minAdb)}`);
   if(res.rc>b.maxRc)res.reasons.push(`${res.rc} returned cheques (max ${b.maxRc})`);
   if(res.maxEmi<=0)res.reasons.push('Existing liabilities use up the DBR limit');
@@ -1272,19 +1272,19 @@ function ctoResults(){
   }
   const res=ctoCompute();
   const m12=m.slice(-12),el=res.filter(r=>r.status!=='no'),best=el[0];
-  $('#ctoKpis').innerHTML=[['Statements',m.length+' months',mLabel(m[0].key)+' – '+mLabel(m[m.length-1].key)],['Avg CTO, all exclusions',fmt(mean(m12.map(x=>x.total-x.own-x.loan-x.returns-x.cash))),'AED / month'],['Daily ADB',fmt(mean(m12.map(x=>x.adbDaily))),'AED'],['Banks that qualify',res.filter(r=>r.status==='ok').length+' of '+res.length,el.length-res.filter(r=>r.status==='ok').length+' more at a lower amount'],['Highest max loan',best?fmt(best.maxLoan):'—',best?bank(best.bankId).short:'No bank qualifies']]
+  $('#ctoKpis').innerHTML=[['Statements',m.length+' months',mLabel(m[0].key)+' – '+mLabel(m[m.length-1].key)],['Total CTO, all exclusions',fmt(m.reduce((a,x)=>a+x.total-x.own-x.loan-x.returns-x.cash,0)),'AED over '+m.length+' month'+(m.length===1?'':'s')],['Daily ADB',fmt(mean(m12.map(x=>x.adbDaily))),'AED'],['Banks that qualify',res.filter(r=>r.status==='ok').length+' of '+res.length,el.length-res.filter(r=>r.status==='ok').length+' more at a lower amount'],['Highest max loan',best?fmt(best.maxLoan):'—',best?bank(best.bankId).short:'No bank qualifies']]
     .map(([l,v,h])=>`<div><span class="label">${l}</span><b>${v}</b><span class="small muted">${h}</span></div>`).join('');
-  let h=`<thead><tr><th>Bank</th><th class="r">Eligible CTO / mo</th><th class="r">ADB</th><th class="r">Income considered</th><th class="r">Max EMI</th><th class="r">Max loan</th><th>Status</th></tr></thead><tbody>`;
+  let h=`<thead><tr><th>Bank</th><th class="r">Total eligible CTO</th><th class="r">ADB</th><th class="r">Income considered</th><th class="r">Max EMI</th><th class="r">Max loan</th><th>Status</th></tr></thead><tbody>`;
   res.forEach(r=>{const b=r.rule,open=CT.open===b.id;
     h+=`<tr class="link" tabindex="0" data-act="cto-open" data-id="${b.id}" aria-expanded="${open}"><td><b style="font-weight:600">${esc(bank(b.id).name)}</b><div class="small muted">${b.months}m · ${ADBL[b.adb]} · ${BASL[b.basis]}</div></td>
-     <td class="r num">${fmt(r.cto)}</td><td class="r num">${fmt(r.adb)}</td><td class="r num">${fmt(r.income)}</td><td class="r num">${r.maxEmi!==undefined?fmt(Math.max(0,r.maxEmi)):'—'}</td><td class="r num"><b>${r.maxLoan?fmt(r.maxLoan):'—'}</b></td>
+     <td class="r num">${r.ctoTotal!==undefined?`<b style="font-weight:600">${fmt(r.ctoTotal)}</b><div class="small muted">${r.nMonths} months · ≈ ${fmt(r.cto)}/mo</div>`:'—'}</td><td class="r num">${fmt(r.adb)}</td><td class="r num">${fmt(r.income)}</td><td class="r num">${r.maxEmi!==undefined?fmt(Math.max(0,r.maxEmi)):'—'}</td><td class="r num"><b>${r.maxLoan?fmt(r.maxLoan):'—'}</b></td>
      <td>${ctoPill(r.status)}${r.reasons.length?`<div class="reasons">${r.reasons.map(esc).join('<br>')}</div>`:''}</td></tr>`;
-    if(open) h+=`<tr class="detailrow"><td colspan="7">${r.cto===undefined?`<span class="muted">${esc(r.reasons.join('. '))}.</span>`:`<div class="breakdown">${[['Period used',r.period],['Avg total credits / month',fmt(r.avgTotal)],['Less excluded credits','− '+fmt(r.avgExcl)],['Cash deposits counted',b.cash+'%'],['Eligible CTO / month',fmt(r.cto)],['ADB ('+ADBL[b.adb]+(b.adb==='fixed'?': '+b.dates:'')+')',fmt(r.adb)],['Income from CTO ('+b.ctoPct+'%)',fmt(r.incCto)],['Income from ADB ('+b.adbPct+'%)',fmt(r.incAdb)],['Basis: '+BASL[b.basis],fmt(r.gross)],['× Ownership share',CT.p.share+'% = '+fmt(r.income)],['DBR cap '+b.dbr+'%',fmt(r.income*b.dbr/100)],['Less liabilities','− '+fmt(r.liab)],['Max EMI',fmt(Math.max(0,r.maxEmi))],['Rate / tenure',b.rate+'% · '+r.years+' yrs'],['Returned cheques',r.rc+' (max '+b.maxRc+')'],['Max loan',fmt(r.maxLoan)]].map(([k,v])=>`<div><span>${esc(k)}</span><b class="num">${esc(String(v))}</b></div>`).join('')}</div>`}</td></tr>`;
+    if(open) h+=`<tr class="detailrow"><td colspan="7">${r.cto===undefined?`<span class="muted">${esc(r.reasons.join('. '))}.</span>`:`<div class="breakdown">${[['Period used',r.period],['Total credits ('+r.nMonths+' months)',fmt(r.totalCredits)],['Less excluded credits','− '+fmt(r.totalExcl)],['Cash deposits counted',b.cash+'%'],['Total eligible CTO',fmt(r.ctoTotal)],['Monthly average (for income)',fmt(r.cto)],['ADB ('+ADBL[b.adb]+(b.adb==='fixed'?': '+b.dates:'')+')',fmt(r.adb)],['Income from CTO ('+b.ctoPct+'% of monthly average)',fmt(r.incCto)],['Income from ADB ('+b.adbPct+'%)',fmt(r.incAdb)],['Basis: '+BASL[b.basis],fmt(r.gross)],['× Ownership share',CT.p.share+'% = '+fmt(r.income)],['DBR cap '+b.dbr+'%',fmt(r.income*b.dbr/100)],['Less liabilities','− '+fmt(r.liab)],['Max EMI',fmt(Math.max(0,r.maxEmi))],['Rate / tenure',b.rate+'% · '+r.years+' yrs'],['Returned cheques',r.rc+' (max '+b.maxRc+')'],['Max loan',fmt(r.maxLoan)]].map(([k,v])=>`<div><span>${esc(k)}</span><b class="num">${esc(String(v))}</b></div>`).join('')}</div>`}</td></tr>`;
   });
   $('#ctoRes').innerHTML=h+'</tbody>';
 }
 const MCOLS=[['total','Total credits'],['own','Own-account transfers'],['loan','Loan / finance credits'],['returns','Refunds / reversals'],['cash','Cash deposits'],['adbDaily','Daily avg balance'],['adbFixed','Fixed-date avg balance'],['adbEnd','Month-end balance'],['rc','Returned cheques']];
-const RCOLS=[['months','Months','sel',[[6,'6'],[12,'12']]],['adb','ADB method','sel',[['daily','Daily average'],['fixed','Fixed dates'],['monthEnd','Month-end']]],['dates','Fixed dates','text'],['cash','Cash counted %','num'],['ctoPct','CTO → income %','num'],['adbPct','ADB → income %','num'],['basis','Income basis','sel',[['cto','CTO only'],['adb','ADB only'],['min','Lower of the two'],['max','Higher of the two']]],['minCto','Min avg CTO','num'],['minAdb','Min ADB','num'],['maxRc','Max returned chq','num'],['rate','Rate %','num'],['tenure','Max tenure (yrs)','num'],['dbr','DBR cap %','num']];
+const RCOLS=[['months','Months','sel',[[6,'6'],[12,'12']]],['adb','ADB method','sel',[['daily','Daily average'],['fixed','Fixed dates'],['monthEnd','Month-end']]],['dates','Fixed dates','text'],['cash','Cash counted %','num'],['ctoPct','CTO → income %','num'],['adbPct','ADB → income %','num'],['basis','Income basis','sel',[['cto','CTO only'],['adb','ADB only'],['min','Lower of the two'],['max','Higher of the two']]],['minCto','Min monthly CTO','num'],['minAdb','Min ADB','num'],['maxRc','Max returned chq','num'],['rate','Rate %','num'],['tenure','Max tenure (yrs)','num'],['dbr','DBR cap %','num']];
 function ctoData(){
   const box=$('#ctoData'); if(!box) return;
   if(CT.tab==='monthly'){
@@ -1294,6 +1294,7 @@ function ctoData(){
     h+=`<div class="scroll bordered"><table class="tbl-sm"><thead><tr><th>Month</th>${MCOLS.map(c=>`<th class="r">${c[1]}</th>`).join('')}<th class="r">Eligible CTO*</th>${ro?'':'<th></th>'}</tr></thead><tbody>`;
     if(!CT.months.length) h+=`<tr><td colspan="12" class="muted">No months yet.</td></tr>`;
     CT.months.forEach((m,i)=>{h+=`<tr><td>${ro?mLabel(m.key):`<input type="month" data-cm="${i}" data-f="key" value="${m.key}" style="min-width:140px">`}</td>`+MCOLS.map(([f])=>`<td class="r num">${ro?fmt(m[f]):`<input class="r num" type="number" min="0" data-cm="${i}" data-f="${f}" value="${Math.round(m[f])}">`}</td>`).join('')+`<td class="r num"><b>${fmt(m.total-m.own-m.loan-m.returns-m.cash)}</b></td>${ro?'':`<td><button data-act="cto-delm" data-i="${i}">Remove</button></td>`}</tr>`;});
+    if(CT.months.length){const sum=f=>CT.months.reduce((a,m)=>a+(+m[f]||0),0),avg=f=>sum(f)/CT.months.length;h+=`<tr style="background:var(--surface-2)"><td><b>Total (${CT.months.length} months)</b></td>`+MCOLS.map(([f])=>`<td class="r num"><b>${/^adb/.test(f)?fmt(avg(f))+'<div class="small muted">average</div>':fmt(sum(f))}</b></td>`).join('')+`<td class="r num"><b>${fmt(CT.months.reduce((a,m)=>a+m.total-m.own-m.loan-m.returns-m.cash,0))}</b></td>${ro?'':'<td></td>'}</tr>`;}
     box.innerHTML=h+`</tbody></table></div><p class="small muted" style="margin:0">*Excludes every flagged credit, including all cash. Each bank's figure above follows that bank's own cash rule.</p>`;
   } else if(CT.tab==='txns'){
     if(!CT.txns.length){box.innerHTML=`<p class="muted" style="margin:0">Upload statements to see every transaction and how it was categorised.</p>`;return;}
@@ -1316,7 +1317,7 @@ function ctoStore(appId){
   const res=ctoCompute();
   a.cto={at:Date.now(),source:CT.source,months:CT.months.length,monthsData:CT.months.map(m=>({...m})),
     files:CT.source==='statement'?CT.files.filter(f=>f.status==='ok').map(f=>({name:f.name,size:f.size,bank:f.bank||'',period:f.period||'',mismatch:f.mismatch||0,tx:f.txns.map(t=>[t.date,String(t.desc).slice(0,80),t.credit,t.debit,t.balance,t.cat||null])})):[],
-    rows:res.map(r=>({bankId:r.bankId,status:r.status,cto:r.cto||0,adb:r.adb||0,maxLoan:r.maxLoan||0}))};
+    rows:res.map(r=>({bankId:r.bankId,status:r.status,cto:r.cto||0,ctoTotal:r.ctoTotal||0,nMonths:r.nMonths||0,adb:r.adb||0,maxLoan:r.maxLoan||0}))};
   const best=res.find(r=>r.status!=='no');
   a.updated=Date.now();
   a.messages.push({from:'sys',name:'System',channel:'internal',text:`CTO / ADB calculated from ${CT.source==='statement'?CT.files.filter(f=>f.status==='ok').length+' statement(s)':'monthly figures'}: ${res.filter(r=>r.status==='ok').length} banks qualify${best?`, highest max loan ${AED(best.maxLoan)} (${bank(best.bankId).short})`:''}.`,at:Date.now()});
@@ -1456,7 +1457,7 @@ document.addEventListener('click',e=>{
       case 'cto-unlock':{const i=+el.dataset.i,rec=CT.files[i],pw=($('#pw-'+i)||{}).value||'';if(!pw){toast('Enter the PDF password');return;}el.disabled=true;el.textContent='Unlocking…';readStatement(rec.file,pw).then(n=>{CT.files[i]=n;if(n.status==='ok'){CT.source='statement';ctoRebuild();if(CT.appId)ctoStore(CT.appId);toast('Statement unlocked and read');}renderUpload();ctoData();ctoResults();});return;}
       case 'cto-manualstart':{CT.tab='monthly';CT.source='manual';document.querySelectorAll('[data-act="cto-tab"]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v==='monthly')));ctoData();const d=$('#ctoData');if(d)d.scrollIntoView({behavior:'smooth',block:'start'});return;}
       case 'cto-resetrules':if(!isAdmin())return;S.rules=JSON.parse(JSON.stringify(SAMPLE_RULES));save();ctoData();ctoResults();toast('Bank rules reset');return;
-      case 'cto-copy':{if(!ctoLast.length){toast('Upload statements first');return;}const p=CT.p;copy(`CTO/ADB assessment\nShare ${p.share}% · EMIs ${AED(p.emis)} · Card limits ${AED(p.cards)} · Requested ${AED(p.loan)} over ${p.tenure} yrs\n\n`+ctoLast.map(r=>`${bank(r.bankId).short}: ${({ok:'Eligible',chk:'Check amount',no:'Not eligible'})[r.status]}${r.cto!==undefined?` | CTO ${fmt(r.cto)}/mo | ADB ${fmt(r.adb)} | Max loan ${fmt(r.maxLoan)}`:''}${r.reasons.length?' | '+r.reasons.join('; '):''}`).join('\n')+'\n\nIndicative only.','Summary copied');return;}
+      case 'cto-copy':{if(!ctoLast.length){toast('Upload statements first');return;}const p=CT.p;copy(`CTO/ADB assessment\nShare ${p.share}% · EMIs ${AED(p.emis)} · Card limits ${AED(p.cards)} · Requested ${AED(p.loan)} over ${p.tenure} yrs\n\n`+ctoLast.map(r=>`${bank(r.bankId).short}: ${({ok:'Eligible',chk:'Check amount',no:'Not eligible'})[r.status]}${r.cto!==undefined?` | Total CTO ${fmt(r.ctoTotal)} (${r.nMonths} months) | ADB ${fmt(r.adb)} | Max loan ${fmt(r.maxLoan)}`:''}${r.reasons.length?' | '+r.reasons.join('; '):''}`).join('\n')+'\n\nIndicative only.','Summary copied');return;}
       case 'cto-save':ctoSaveTo(CT.appId);return;
     }
   }
