@@ -1039,7 +1039,7 @@ function sampleTxns(){
   return out;
 }
 function classify(t){const d=t.desc.toUpperCase();if(t.credit<=0)return null;if(/OWN ACC|OWN ACCOUNT|SELF TRANSFER|TRF FROM OWN|OWN TRANSFER/.test(d))return'own';if(/LOAN|FINANCE DISB|DISBURS/.test(d))return'loan';if(/REVERSAL|REFUND|RETURN/.test(d))return'returns';if(/CASH DEP|CDM|CASH DEPOSIT/.test(d))return'cash';return'business';}
-const isRC=t=>t.debit>0&&/(CHQ|CHEQUE).*RETURN|RETURN.*(CHQ|CHEQUE)|BOUNCE|UNPAID CHQ/i.test(t.desc);
+const isRC=t=>t.debit>0&&/(CHQ|CHEQUE).*RETURN|RETURN.*(CHQ|CHEQUE)|BOUNCE|UNPAID|DISHONOU?R|\bRTN\b|RETURNED/i.test(t.desc);
 const CAT={business:'Business income',own:'Own-account transfer',loan:'Loan / finance',returns:'Refund / reversal',cash:'Cash deposit'};
 function prepTxns(l){l.forEach(t=>{if(!('cat' in t)||(t.credit>0&&!t.cat))t.cat=classify(t);t.rc=isRC(t);});const biz=l.filter(t=>t.cat==='business').map(t=>t.credit).sort((a,b)=>a-b);const med=biz.length?biz[Math.floor(biz.length/2)]:0;l.forEach(t=>{t.flag=t.credit>0&&med>0&&t.credit>3*med;});return l;}
 function fixedAvg(arr,dates){const pts=String(dates).split(',').map(s=>s.trim().toLowerCase()).filter(Boolean).map(s=>s==='end'?arr.length:Math.min(arr.length,Math.max(1,parseInt(s,10)||1)));return pts.length?pts.reduce((a,p)=>a+arr[p-1],0)/pts.length:mean(arr);}
@@ -1080,31 +1080,41 @@ function parseDate(s){s=String(s).trim();let m;
   if((m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/)))return isoDate(m[3],m[2],m[1]);
   if((m=s.match(/^(\d{1,2})[\/\-. ]([A-Za-z]{3,9})[\/\-., ]+(\d{2,4})/))){const mo=MON[m[2].slice(0,3).toLowerCase()];return mo?isoDate(m[3],mo,m[1]):null;}
   return null;}
-function moneyVal(t){const m=String(t).replace(/^AED/i,'').match(/^(-)?\(?(\d{1,3}(?:,\d{3})+|\d+)\.(\d{1,2})\)?(CR|DR)?$/i);if(!m)return null;let v=parseFloat(m[2].replace(/,/g,'')+'.'+m[3]);if(m[1]||/^\(/.test(t))v=-v;return {v,tag:(m[4]||'').toUpperCase()};}
-const CREDIT_WORDS=/INWARD|DEPOSIT|TRANSFER FROM|CREDIT|SALARY|REFUND|REVERSAL|RECEIVED|PROCEEDS/i;
+function moneyVal(t){const s=String(t).replace(/^(AED|INR|USD|EUR|Rs\.?)/i,'');const m=s.match(/^(-)?\(?(\d{1,3}(?:,\d{2,3})+|\d+)\.(\d{1,2})\)?(CR|DR)?$/i);if(!m)return null;let v=parseFloat(m[2].replace(/,/g,'')+'.'+m[3]);if(m[1]||/^\(/.test(s))v=-v;return {v,tag:(m[4]||'').toUpperCase()};}
+const CREDIT_WORDS=/INWARD|DEPOSIT|TRANSFER FROM|CREDIT|SALARY|REFUND|REVERSAL|RECEIVED|PROCEEDS|INT\.?PD|INTEREST/i;
+const HEADER_LINE=l=>/date/i.test(l)&&/(balance|particular|description|narration|details|debit|credit|withdraw)/i.test(l);
+const FOOTER_LINE=l=>/^(page\s*\d|\d+\s*of\s*\d+|total|closing balance|opening balance|statement of|end of statement|this is a (system|computer))/i.test(l);
 function parseStatementLines(lines){
-  const recs=[];let opening=null,lastRec=null;
+  const recs=[];let opening=null,lastRec=null,pending=[],mode=null;
   for(const raw of lines){
     const line=String(raw).replace(/\s+/g,' ').trim();if(!line)continue;
-    const toks=line.split(' ');const money=[];let i=toks.length-1;
-    while(i>=0){const t=toks[i];if(/^(CR|DR)$/i.test(t)&&i>0&&moneyVal(toks[i-1])){const mv=moneyVal(toks[i-1]);mv.tag=t.toUpperCase();money.unshift(mv);i-=2;continue;}const mv=moneyVal(t);if(!mv)break;money.unshift(mv);i--;}
-    let rest=toks.slice(0,i+1).join(' ');
-    const dm=rest.match(DATE_AT);
+    if(HEADER_LINE(line)&&!DATE_AT.test(line)){pending=[];continue;}
+    const toks=line.split(' ');
+    const dm=line.match(DATE_AT);
+    const body=dm?line.slice(dm[0].length).trim():line;
+    const btoks=body?body.split(' '):[];
+    // money tokens anywhere in the line (CR/DR suffix may be a separate token); trailing codes after the balance are ignored
+    const money=[];let firstMoney=-1;
+    btoks.forEach((t,i)=>{const mv=moneyVal(t);if(mv){if(/^(CR|DR)$/i.test(btoks[i+1]||''))mv.tag=btoks[i+1].toUpperCase();money.push(mv);if(firstMoney<0)firstMoney=i;}});
+    if(/opening balance|balance brought forward|brought forward|previous balance|balance b\/f/i.test(line)){if(money.length)opening=money[money.length-1].v*(money[money.length-1].tag==='DR'?-1:1);pending=[];continue;}
     if(!dm){
-      if(/opening balance|balance brought forward|brought forward|previous balance|balance b\/f/i.test(line)&&money.length){opening=money[money.length-1].v*(money[money.length-1].tag==='DR'?-1:1);continue;}
-      if(lastRec&&!money.length&&rest.length<90&&!/page \d|balance|total|statement|account|date/i.test(rest))lastRec.desc=(lastRec.desc+' '+rest).slice(0,140);
+      if(money.length||FOOTER_LINE(line))continue;
+      if(mode==='after'&&lastRec)lastRec.desc=(lastRec.desc+' '+line).slice(0,160);
+      else if(line.length<120)pending.push(line);
       continue;
     }
     const date=parseDate(dm[1]);if(!date)continue;
-    rest=rest.slice(dm[0].length).trim();
-    const vd=rest.match(DATE_AT);if(vd)rest=rest.slice(vd[0].length).trim();
-    if(/opening balance|brought forward|balance b\/f/i.test(rest)){if(money.length)opening=money[money.length-1].v*(money[money.length-1].tag==='DR'?-1:1);continue;}
-    if(/closing balance|carried forward|balance c\/f/i.test(rest))continue;
+    let desc=(firstMoney>=0?btoks.slice(0,firstMoney):btoks).join(' ');
+    const vd=desc.match(DATE_AT);if(vd)desc=desc.slice(vd[0].length).trim();
+    if(/closing balance|carried forward|balance c\/f/i.test(desc))continue;
     if(money.length<2){lastRec=null;continue;}
+    if(mode===null)mode=pending.length?'before':'after';
+    if(mode==='before'){desc=(pending.join(' ')+' '+desc).trim();}
+    pending=[];
     const balM=money[money.length-1];const bal=balM.v*(balM.tag==='DR'?-1:1);
-    let cands=money.slice(0,-1).filter(x=>Math.abs(x.v)>0);if(!cands.length)continue;
+    const cands=money.slice(0,-1).filter(x=>Math.abs(x.v)>0);if(!cands.length)continue;
     const amtM=cands[cands.length-1];
-    lastRec={date,desc:rest||'Transaction',amt:Math.abs(amtM.v),tag:amtM.tag,neg:amtM.v<0,bal,two:cands.length>1?cands:null};
+    lastRec={date,desc:desc||'Transaction',amt:Math.abs(amtM.v),tag:amtM.tag,neg:amtM.v<0,bal};
     recs.push(lastRec);
   }
   if(recs.length>1&&recs[0].date>recs[recs.length-1].date)recs.reverse();
@@ -1113,8 +1123,8 @@ function parseStatementLines(lines){
     let credit=null;
     if(r.tag==='CR')credit=true;else if(r.tag==='DR')credit=false;
     if(prev!==null&&prev!==undefined){const d=+(r.bal-prev).toFixed(2);if(Math.abs(d-r.amt)<0.02)credit=true;else if(Math.abs(d+r.amt)<0.02)credit=false;else{if(credit===null)credit=d>0;mismatch++;}}
-    else if(credit===null){const nx=recs[idx+1];if(nx){const d=+(nx.bal-r.bal).toFixed(2);credit=r.neg?false:CREDIT_WORDS.test(r.desc);void d;}else credit=CREDIT_WORDS.test(r.desc)&&!r.neg;}
-    txns.push({date:r.date,desc:r.desc.slice(0,140),credit:credit?r.amt:0,debit:credit?0:r.amt,balance:r.bal});
+    else if(credit===null){const nx=recs[idx+1];if(nx){const d=+(nx.bal-nx.amt-r.bal).toFixed(2),d2=+(nx.bal+nx.amt-r.bal).toFixed(2);credit=r.neg?false:CREDIT_WORDS.test(r.desc);void d;void d2;}else credit=CREDIT_WORDS.test(r.desc)&&!r.neg;}
+    txns.push({date:r.date,desc:r.desc.slice(0,160),credit:credit?r.amt:0,debit:credit?0:r.amt,balance:r.bal});
     prev=r.bal;
   });
   return {txns,mismatch};
