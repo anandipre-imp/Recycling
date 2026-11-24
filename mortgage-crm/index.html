@@ -1,0 +1,1348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Mortgage CRM</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: fixed left sidebar + scrolling main area, modelled on a broker portal. Collapses to a top bar on phones. */
+:root{
+  --bg:#f4f6f5; --surface:#ffffff; --surface-2:#f0f3f2; --line:#e0e6e3; --line-2:#cfd8d4;
+  --fg:#17211d; --muted:#5f6d68; --accent:#1f5f45; --accent-2:#2c7a5a; --accent-soft:#e3f0ea; --on-accent:#ffffff;
+  --blue:#2f5fb3; --indigo:#5848b8; --amber:#a5660a; --teal:#0f7c7a; --violet:#8a3fa8; --green:#22804f; --red:#b83a32; --grey:#6b7570;
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1311; --surface:#151c19; --surface-2:#1b2420; --line:#26312c; --line-2:#334039;
+  --fg:#e4ece8; --muted:#97a69f; --accent:#5cc497; --accent-2:#74d3a8; --accent-soft:#183428; --on-accent:#06170f;
+  --blue:#7ea6ef; --indigo:#a49af0; --amber:#e6b14f; --teal:#55c9c4; --violet:#cf8fe6; --green:#66cf93; --red:#f08a80; --grey:#a3ada8; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1311; --surface:#151c19; --surface-2:#1b2420; --line:#26312c; --line-2:#334039;
+  --fg:#e4ece8; --muted:#97a69f; --accent:#5cc497; --accent-2:#74d3a8; --accent-soft:#183428; --on-accent:#06170f;
+  --blue:#7ea6ef; --indigo:#a49af0; --amber:#e6b14f; --teal:#55c9c4; --violet:#cf8fe6; --green:#66cf93; --red:#f08a80; --grey:#a3ada8; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.45}
+a{color:inherit}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+h1{font-size:24px;margin:0;font-weight:700;letter-spacing:-.015em;text-wrap:balance}
+h2{font-size:16px;margin:0;font-weight:600}
+h3{font-size:14px;margin:0;font-weight:600}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+
+/* Shell */
+.shell{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100%}
+.side{background:var(--surface);border-right:1px solid var(--line);padding:18px 14px;display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 14px;font-size:18px;font-weight:600;text-decoration:none}
+.logo{width:36px;height:36px;border-radius:50%;background:var(--accent);display:grid;place-items:center;color:var(--on-accent);font-weight:700;font-size:13px;flex:none}
+.nav{display:grid;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;text-decoration:none;color:var(--muted);font-weight:500}
+.nav a:hover{background:var(--surface-2);color:var(--fg)}
+.nav a.on{background:var(--accent-soft);color:var(--accent)}
+.nav svg{width:17px;height:17px;flex:none}
+.nav .badge{margin-left:auto}
+.sep{height:1px;background:var(--line);margin:8px 6px}
+.side .label{padding:6px 10px 2px}
+.quick a{font-size:13px}
+.usercard{margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:var(--r)}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-weight:600;font-size:12px;flex:none}
+.topbar{display:none}
+.main{min-width:0;padding-block:24px 56px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+.page{max-width:1280px;margin:0 auto;display:grid;gap:18px}
+@media (max-width:900px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .side{position:fixed;inset:0 auto 0 0;width:270px;z-index:30;transform:translateX(-105%);transition:transform .2s;padding-top:calc(18px + env(safe-area-inset-top,0px));padding-left:max(14px,env(safe-area-inset-left,0px))}
+  .side.open{transform:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.35)}
+  .topbar{display:flex;align-items:center;gap:10px;position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:21;background:var(--surface)}
+  .main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 48px}
+}
+
+/* Controls */
+button,.btn{font:inherit;cursor:pointer;border-radius:8px;padding:8px 13px;border:1px solid var(--line-2);background:var(--surface);color:var(--fg);font-weight:500;display:inline-flex;align-items:center;gap:7px;text-decoration:none;white-space:nowrap}
+button:hover,.btn:hover{background:var(--surface-2)}
+.primary{background:var(--accent)!important;border-color:var(--accent)!important;color:var(--on-accent)!important}
+.primary:hover{filter:brightness(1.07)}
+.ghost{border-color:transparent;background:transparent}
+.icon-btn{padding:6px;border-color:var(--line)}
+button svg,.btn svg{width:16px;height:16px}
+input,select,textarea{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line-2);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+textarea{resize:vertical}
+input.r{text-align:right}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.field{display:grid;gap:5px;min-width:0}
+.field>span{font-size:12px;color:var(--muted);font-weight:500}
+.grid-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.spread{justify-content:space-between}
+.grow{flex:1 1 auto}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:grid;gap:14px;min-width:0;align-content:start}
+.card.flush{padding:0;gap:0;overflow:hidden}
+.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:3px;gap:2px;overflow-x:auto}
+.seg button{border:0;background:transparent;padding:6px 14px;border-radius:7px;color:var(--muted);flex:1 0 auto}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.filter{width:auto;padding:7px 10px;background:var(--surface)}
+.search{position:relative;min-width:220px}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--muted)}
+.search input{padding-left:32px}
+
+/* Tables */
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+th,td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap}
+td.r,th.r{text-align:right}
+tbody tr:last-child td{border-bottom:0}
+tr.link{cursor:pointer}
+tr.link:hover td{background:var(--surface-2)}
+.nowrap{white-space:nowrap}
+
+/* Pills & badges */
+.pill{--c:var(--grey);display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;color:var(--c);background:color-mix(in srgb,var(--c) 13%,transparent);white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.badge{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--accent);color:var(--on-accent);font-size:11px;font-weight:700}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-left:5px;vertical-align:middle}
+.banklogo{display:inline-flex;align-items:center;gap:9px;white-space:nowrap}
+.banklogo i{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:8.5px;letter-spacing:-.02em;font-weight:700;color:#fff;flex:none}
+.status-cell{display:grid;gap:2px;justify-items:start}
+
+/* Detail */
+.crumbs{display:flex;gap:8px;align-items:center;color:var(--muted);flex-wrap:wrap}
+.crumbs a{text-decoration:none}
+.crumbs a:hover{color:var(--fg)}
+.crumbs b{color:var(--fg);font-weight:500}
+.detail-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:18px;align-items:start}
+@media (max-width:1100px){.detail-grid{grid-template-columns:minmax(0,1fr)}}
+.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 24px}
+@media (max-width:520px){.kv{grid-template-columns:minmax(0,1fr)}}
+.kv div{display:grid;gap:2px;min-width:0}
+.kv span{font-size:12px;color:var(--muted)}
+.kv b{font-weight:500;overflow-wrap:anywhere}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);font-weight:500}
+.linkbtn:hover{background:none;text-decoration:underline}
+.stepper{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.step{display:grid;gap:6px}
+.step .bar{height:5px;border-radius:3px;background:var(--line)}
+.step.done .bar{background:var(--accent)}
+.step.now .bar{background:linear-gradient(90deg,var(--accent) 50%,var(--line) 50%)}
+.step span{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.step.now span,.step.done span{color:var(--fg)}
+.doclist{display:grid}
+.doc{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.doc:last-child{border-bottom:0}
+.doc .nm{min-width:0}
+.doc .nm a,.doc .nm div{overflow-wrap:anywhere}
+.doc .ic{width:18px;height:18px;color:var(--muted)}
+.doc.ok .ic{color:var(--green)}
+.doc.miss .ic{color:var(--amber)}
+.upl{position:relative;overflow:hidden}
+.upl input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.timeline{display:grid;gap:0}
+.tl{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;padding-bottom:14px;position:relative}
+.tl::before{content:"";position:absolute;left:10px;top:22px;bottom:0;width:1px;background:var(--line)}
+.tl:last-child::before{display:none}
+.tl i{width:21px;height:21px;border-radius:50%;border:1.5px solid var(--line-2);display:grid;place-items:center;background:var(--surface)}
+.tl.done i{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.tl.now i{border-color:var(--amber);color:var(--amber)}
+.tl i svg{width:12px;height:12px}
+.chat{display:grid;grid-template-rows:minmax(0,1fr) auto;height:560px;padding:0}
+.msgs{overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:85%;padding:9px 12px;border-radius:12px;background:var(--surface-2);display:grid;gap:3px}
+.msg.me{align-self:flex-end;background:var(--accent-soft)}
+.msg.note{background:color-mix(in srgb,var(--amber) 12%,transparent);border:1px dashed color-mix(in srgb,var(--amber) 45%,transparent)}
+.msg.sys{align-self:center;background:none;color:var(--muted);font-size:12px;padding:2px}
+.msg .meta{font-size:11px;color:var(--muted)}
+.compose{border-top:1px solid var(--line);padding:12px;display:grid;gap:8px}
+.empty{display:grid;place-items:center;color:var(--muted);text-align:center;padding:30px 10px;gap:6px}
+
+/* Dashboard & boards */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:grid;gap:3px}
+.kpi .v{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px}
+@media (max-width:420px){.two{grid-template-columns:minmax(0,1fr)}}
+.bars{display:grid;gap:9px}
+.barrow{display:grid;grid-template-columns:130px minmax(0,1fr) 110px;gap:10px;align-items:center;font-size:13px}
+.barrow .track{height:10px;background:var(--surface-2);border-radius:5px;overflow:hidden}
+.barrow .fill{height:100%;background:var(--c,var(--accent));border-radius:5px}
+.list{display:grid}
+.li{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+.li:last-child{border-bottom:0}
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(250px,1fr);gap:12px;overflow-x:auto;padding-bottom:6px}
+.col{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:10px;display:grid;gap:8px;align-content:start;min-height:200px}
+.col h3{display:flex;justify-content:space-between;padding:2px 4px}
+.lead{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;gap:6px}
+.lead select{padding:5px 7px;font-size:12px}
+
+/* CTO */
+.ctokpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.ctokpis div{background:var(--surface);padding:11px 13px;display:grid;gap:2px}
+.ctokpis b{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.tbl-sm th,.tbl-sm td{padding:8px 10px;font-size:13px;white-space:nowrap}
+.tbl-sm td input{min-width:90px;padding:5px 7px}
+.tbl-sm td select{min-width:110px;padding:5px 7px}
+.bordered{border:1px solid var(--line);border-radius:var(--r)}
+tr.detailrow td{background:var(--surface-2);white-space:normal}
+.breakdown{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:4px 24px;font-size:13px}
+.breakdown div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--line);padding:4px 0}
+.notice{background:color-mix(in srgb,var(--amber) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--amber) 30%,transparent);border-radius:8px;padding:10px 12px;font-size:13px}
+.notice.info{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 25%,transparent)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:9px 12px;color:var(--muted);font-weight:600}
+.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.reasons{color:var(--muted);font-size:12px;white-space:normal;max-width:260px;margin-top:2px}
+
+/* Modal & toast */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:grid;place-items:center;z-index:40;padding:16px}
+.modal{background:var(--surface);border-radius:12px;padding:20px;width:min(480px,100%);display:grid;gap:14px;max-height:90vh;overflow-y:auto}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:500;z-index:50;max-width:calc(100% - 32px)}
+.feedback-note{font-size:12px;color:var(--muted);text-align:center;padding:8px}
+@media (prefers-reduced-motion:reduce){.side{transition:none}}
+.login{max-width:620px;margin:24px auto;display:grid;gap:16px}
+body[data-auth="out"] .side,body[data-auth="out"] .topbar{display:none}
+body[data-auth="out"] .shell{grid-template-columns:minmax(0,1fr)}
+.fb-tab{position:fixed;right:env(safe-area-inset-right,0px);top:50%;transform:translateY(-50%) rotate(180deg);writing-mode:vertical-rl;z-index:25;background:var(--accent-soft);color:var(--accent);border:1px solid var(--line);border-left:0;border-radius:0 8px 8px 0;padding:14px 8px;font-weight:600;font-size:13px}
+.fb-tab:hover{background:var(--accent-soft);filter:brightness(.97)}
+button:disabled,input:disabled,select:disabled{opacity:.6;cursor:not-allowed}
+</style>
+
+</head>
+<body>
+<div class="shell">
+  <aside class="side" id="side"></aside>
+  <div style="min-width:0">
+    <div class="topbar"><button class="icon-btn" data-act="menu" aria-label="Open menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><span class="logo" style="width:28px;height:28px;font-size:11px">MC</span><b>Mortgage CRM</b></div>
+    <main class="main"><div class="page" id="view"></div></main>
+  </div>
+</div>
+<button class="fb-tab" data-act="feedback">Feedback</button>
+<div id="modal"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+/* ===== FEEDBACK SETTINGS: fill in one or both, then save the file ===== */
+const FEEDBACK_SHEET_URL=''; // Google Apps Script web app URL, e.g. 'https://script.google.com/macros/s/XXXX/exec'
+const FEEDBACK_WHATSAPP='';  // WhatsApp number with country code, digits only, e.g. '971501234567'
+/* ====================================================================== */
+const BRAND='Mortgage CRM';
+/* ============ utils ============ */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>isFinite(n)?Math.round(n).toLocaleString('en-US'):'—';
+const AED=n=>'AED '+fmt(n);
+const DAY=86400000;
+const uid=p=>p+Math.random().toString(36).slice(2,8);
+const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+function emi(P,rate,months){const r=rate/1200;return r?P*r/(1-Math.pow(1+r,-months)):P/months;}
+function loanFromEmi(E,rate,months){if(E<=0)return 0;const r=rate/1200;return r?E*(1-Math.pow(1+r,-months))/r:E*months;}
+function rel(ts){
+  const d=new Date(ts),now=new Date(),t0=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
+  const time=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}).toLowerCase();
+  if(ts>=t0) return 'Today '+time; if(ts>=t0-DAY) return 'Yesterday '+time;
+  return Math.max(2,Math.floor((t0-ts)/DAY)+1)+' days ago';
+}
+const dstr=ts=>new Date(ts).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+const dtstr=ts=>new Date(ts).toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit'});
+function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2600);}
+function copy(txt,msg){const fb=()=>{const ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.left='-9999px';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast(msg);}catch(e){toast('Copy failed. Select the text manually.');}ta.remove();};try{navigator.clipboard.writeText(txt).then(()=>toast(msg),fb);}catch(e){fb();}}
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const I={
+  products:'<path d="M3 21h18M5 21V10M19 21V10M9 21v-7M15 21v-7M2 10l10-6 10 6"/>',
+  docs:'<path d="M4 5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2zM11 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"/>',
+  proposals:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5"/>',
+  apps:'<path d="M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 10h18"/>',
+  dash:'<path d="M3 3h8v8H3zM13 3h8v5h-8zM13 10h8v11h-8zM3 13h8v8H3z"/>',
+  leads:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+  calc:'<path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h8"/>',
+  coins:'<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  chart:'<path d="M3 3v18h18M7 15l4-4 3 3 6-6"/>',
+  help:'<path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  search:'<path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3"/>',
+  copy:'<path d="M9 9h11v11H9zM5 15H4V4h11v1"/>',
+  share:'<path d="M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>',
+  download:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
+  sort:'<path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/>',
+  file:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  clock:'<path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2"/>',
+  upload:'<path d="M12 21V9M7 14l5-5 5 5M5 3h14"/>',
+  logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+  edit:'<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  bolt:'<path d="M13 2 3 14h9l-1 8 10-12h-9z"/>'
+};
+const ic=(n,extra='')=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${extra}>${I[n]}</svg>`;
+
+/* ============ reference data ============ */
+const BANKS=[
+  {id:'enbd',name:'Emirates NBD',short:'ENBD',color:'#1d3f8f',comm:0.75},
+  {id:'adcb',name:'Abu Dhabi Commercial Bank',short:'ADCB',color:'#b4202a',comm:0.7},
+  {id:'fab',name:'First Abu Dhabi Bank',short:'FAB',color:'#1f4e9c',comm:0.6},
+  {id:'mashreq',name:'Mashreq',short:'MASHREQ',color:'#e05a1b',comm:0.8},
+  {id:'dib',name:'Dubai Islamic Bank',short:'DIB',color:'#2d7a3a',comm:0.75},
+  {id:'adib',name:'Abu Dhabi Islamic Bank',short:'ADIB',color:'#2c6aa8',comm:0.7},
+  {id:'rak',name:'RAKBANK',short:'RAK',color:'#b3182f',comm:0.9},
+  {id:'cbd',name:'Commercial Bank of Dubai',short:'CBD',color:'#0d6e5f',comm:0.8},
+  {id:'ei',name:'Emirates Islamic',short:'EI',color:'#0f5c4d',comm:0.75}
+];
+const bank=id=>BANKS.find(b=>b.id===id)||BANKS[0];
+const STAGES=[
+  {id:'preapproval',label:'Pre-approval',c:'var(--blue)',subs:['Documents collection','Submitted to bank','Pre-approved']},
+  {id:'valuation',label:'Valuation',c:'var(--indigo)',subs:['Valuation initiated','Valuation received']},
+  {id:'processing',label:'Processing',c:'var(--amber)',subs:['Review & Packaging','Submitted for final approval']},
+  {id:'offer',label:'Offer',c:'var(--teal)',subs:['FOL issued','FOL signed']},
+  {id:'transfer',label:'Transfer',c:'var(--violet)',subs:['Clearance letter requested','DLD transfer booked']},
+  {id:'disbursed',label:'Disbursed',c:'var(--green)',subs:['Disbursed']}
+];
+const OTHER=[{id:'declined',label:'Declined',c:'var(--red)',subs:['Declined by bank','Client withdrew']},{id:'hold',label:'On hold',c:'var(--grey)',subs:['On hold']}];
+const ALLST=[...STAGES,...OTHER];
+const stage=id=>ALLST.find(s=>s.id===id)||STAGES[0];
+const FLOW=STAGES.flatMap(s=>s.subs.map(sub=>({stage:s.id,sub})));
+const ADVISORS=['Sara Qureshi','Omar Farouk','Priya Nair'];
+const PARTNERS=['Direct','Skyline Realty','Palm Gate Properties','Harbour Homes'];
+const LEAD_STAGES=['New','Contacted','Qualified','Docs pending','Converted','Lost'];
+const SOURCES=['Website','WhatsApp','Meta ads','Property Finder','Bayut','Referral partner','Walk-in'];
+const DOCS={
+  Salaried:['Passport','Residence visa','Emirates ID','Salary certificate','Payslips (3 months)','Personal bank statements (6 months)'],
+  'Self-employed':['Passport','Residence visa','Emirates ID','Trade license','Memorandum of association','Company bank statements (12 months)','Personal bank statements (6 months)','Audited financials (2 years)'],
+  property:['Title deed / SPA','Form F (MOU)','Valuation report'],
+  bank:['Bank application form','Key facts statement','Pre-approval letter','Final offer letter']
+};
+const SAMPLE_RULES=[
+ {id:'enbd',months:12,adb:'daily',dates:'5,10,15,20,25,end',cash:100,ctoPct:25,adbPct:0,basis:'cto',minCto:150000,minAdb:50000,maxRc:2,rate:4.25,tenure:25,dbr:50},
+ {id:'adcb',months:6,adb:'fixed',dates:'5,10,15,20,25,end',cash:50,ctoPct:20,adbPct:30,basis:'max',minCto:100000,minAdb:75000,maxRc:1,rate:4.19,tenure:25,dbr:50},
+ {id:'fab',months:12,adb:'daily',dates:'5,10,15,20,25,end',cash:100,ctoPct:30,adbPct:0,basis:'cto',minCto:200000,minAdb:100000,maxRc:2,rate:4.10,tenure:25,dbr:50},
+ {id:'mashreq',months:6,adb:'fixed',dates:'1,10,20,end',cash:0,ctoPct:25,adbPct:40,basis:'min',minCto:120000,minAdb:60000,maxRc:2,rate:4.35,tenure:25,dbr:50},
+ {id:'dib',months:12,adb:'monthEnd',dates:'5,10,15,20,25,end',cash:50,ctoPct:0,adbPct:50,basis:'adb',minCto:100000,minAdb:100000,maxRc:1,rate:4.29,tenure:25,dbr:50},
+ {id:'adib',months:6,adb:'daily',dates:'5,10,15,20,25,end',cash:100,ctoPct:22,adbPct:0,basis:'cto',minCto:150000,minAdb:80000,maxRc:2,rate:4.14,tenure:25,dbr:50},
+ {id:'rak',months:6,adb:'fixed',dates:'5,15,25',cash:50,ctoPct:20,adbPct:35,basis:'max',minCto:80000,minAdb:40000,maxRc:3,rate:4.49,tenure:25,dbr:50},
+ {id:'cbd',months:12,adb:'daily',dates:'5,10,15,20,25,end',cash:100,ctoPct:20,adbPct:0,basis:'cto',minCto:100000,minAdb:50000,maxRc:2,rate:4.39,tenure:25,dbr:50},
+ {id:'ei',months:12,adb:'monthEnd',dates:'5,10,15,20,25,end',cash:0,ctoPct:25,adbPct:45,basis:'min',minCto:150000,minAdb:150000,maxRc:1,rate:4.24,tenure:25,dbr:50}
+];
+function sampleProducts(){
+  const out=[];const r=rng(3);
+  BANKS.forEach(b=>{
+    const isl=['dib','adib','ei'].includes(b.id);
+    const base=3.95+r()*0.5;
+    out.push({id:uid('p'),bankId:b.id,name:(isl?'Home Finance':'Home Loan')+' 3Y Fixed',type:isl?'Islamic':'Conventional',rate:+base.toFixed(2),fixed:3,ltv:80,minSalary:15000+Math.round(r()*3)*5000,fee:'Up to 1% of loan',stl:'STL'});
+    out.push({id:uid('p'),bankId:b.id,name:(isl?'Home Finance':'Home Loan')+' 5Y Fixed',type:isl?'Islamic':'Conventional',rate:+(base+0.2+r()*0.2).toFixed(2),fixed:5,ltv:80,minSalary:15000+Math.round(r()*3)*5000,fee:'Up to 1% of loan',stl:'STL'});
+    out.push({id:uid('p'),bankId:b.id,name:'Variable (3M EIBOR + margin)',type:isl?'Islamic':'Conventional',rate:+(4.6+r()*0.6).toFixed(2),fixed:0,ltv:80,minSalary:20000,fee:'AED 10,000 flat',stl:r()<.5?'STL':'NSTL'});
+  });
+  return out;
+}
+
+/* ============ people ============ */
+const BROKERAGES=[
+  {id:'b1',name:'Crescent Mortgage Brokers LLC',share:60,license:'EX-1021'},
+  {id:'b2',name:'Northbay Finance Consultants',share:55,license:'EX-2290'},
+  {id:'b3',name:'Al Waha Home Finance Advisory',share:50,license:'EX-3307'}
+];
+const brokerage=id=>BROKERAGES.find(b=>b.id===id)||{name:'—',share:0};
+const ROLE={admin:'Admin',advisor:'Mortgage advisor',manager:'Brokerage manager',broker:'Mortgage broker'};
+const SEED_USERS=[
+  {id:'u0',name:'Admin User',role:'admin'},
+  {id:'u1',name:'Sara Qureshi',role:'advisor'},{id:'u2',name:'Omar Farouk',role:'advisor'},{id:'u3',name:'Priya Nair',role:'advisor'},
+  {id:'u4',name:'Ravi Sharma',role:'broker',brokerage:'b1'},{id:'u5',name:'Hannah Lee',role:'manager',brokerage:'b1'},
+  {id:'u6',name:'Yusuf Rahim',role:'broker',brokerage:'b2'},{id:'u7',name:'Maria Lopez',role:'broker',brokerage:'b2'},
+  {id:'u8',name:'Daniel Mwangi',role:'broker',brokerage:'b3'}
+];
+
+/* ============ seed ============ */
+function seed(){
+  const now=Date.now();
+  const at=(d,h=10,m=0)=>{const x=new Date(now-d*DAY);x.setHours(h,m,0,0);return Math.min(x.getTime(),now-60000);};
+  const users=SEED_USERS.map((u,i)=>({...u,mobile:'+971 50 '+String(1000000+i*137911).slice(0,7),email:u.name.toLowerCase().replace(/\s+/g,'.')+'@example.com',license:u.brokerage?'BRK-'+(4100+i):'',notifyEmail:true,notifyDaily:true}));
+  const C=(name,emp,nat,res,salary,extra={})=>({id:uid('c'),name,employment:emp,nationality:nat,residency:res,salary,mobile:'+971 5'+Math.floor(10000000+Math.random()*89999999),email:name.toLowerCase().split(' ')[0]+'@example.com',employer:emp==='Salaried'?'Example Employer LLC':'',company:'',emis:0,cards:0,dob:'1986-04-12',eidExpiry:new Date(now+(100+Math.random()*600)*DAY).toISOString().slice(0,10),passportExpiry:new Date(now+(300+Math.random()*1500)*DAY).toISOString().slice(0,10),co:null,...extra});
+  const clients=[
+    C('Rahul Menon','Salaried','India','UAE Resident',32000,{emis:2500,cards:30000}),
+    C('Fatima Al Suwaidi','Salaried','UAE','UAE National',45000,{cards:50000}),
+    C('James Whitfield','Self-employed','United Kingdom','UAE Resident',0,{company:'Whitfield Design FZ-LLC',emis:6500,cards:60000}),
+    C('Aisha Rahman','Salaried','Pakistan','UAE Resident',28000,{emis:1800,eidExpiry:new Date(now+35*DAY).toISOString().slice(0,10)}),
+    C('Daniel Okafor','Salaried','Nigeria','UAE Resident',38000,{cards:40000,co:{name:'Grace Okafor',employment:'Salaried',salary:22000}}),
+    C('Elena Petrova','Self-employed','Russia','UAE Resident',0,{company:'Petrova Events LLC',cards:25000}),
+    C('Mohammed Al Hashimi','Salaried','UAE','UAE National',60000,{emis:9000}),
+    C('Sneha Iyer','Salaried','India','UAE Resident',26000,{cards:20000}),
+    C('Karim Haddad','Self-employed','Lebanon','UAE Resident',0,{company:'Haddad General Trading LLC',emis:4000,cards:45000}),
+    C('Laura Bianchi','Salaried','Italy','Non-resident',55000,{}),
+    C('Arjun Kapoor','Salaried','India','UAE Resident',41000,{emis:3200,co:{name:'Meera Kapoor',employment:'Salaried',salary:18000}}),
+    C('Noura Al Mansoori','Salaried','UAE','UAE National',52000,{cards:70000})
+  ];
+  const products=sampleProducts();
+  const A=(ci,bankId,amount,prop,stageId,sub,daysAgo,brokerId,opts={})=>{
+    const c=clients[ci],b=bankId,prod=products.find(p=>p.bankId===b&&p.fixed===3);
+    const created=at(daysAgo+8+Math.floor(Math.random()*12),9,30);
+    const upd=opts.updated??at(daysAgo,9+Math.floor(Math.random()*8),Math.floor(Math.random()*59));
+    const idx=FLOW.findIndex(f=>f.stage===stageId&&f.sub===sub);
+    const ma=opts.ma||ADVISORS[ci%3];
+    const timeline=[{stage:'created',sub:'Application created',at:created,by:users.find(u=>u.id===brokerId).name}];
+    if(idx>=0){for(let i=0;i<=idx;i++){const t=created+(upd-created)*(i+1)/(idx+1);timeline.push({stage:FLOW[i].stage,sub:FLOW[i].sub,at:i===idx?upd:t,by:ma});}}
+    else timeline.push({stage:stageId,sub,at:upd,by:ma});
+    const docs={}, first=c.name.split(' ')[0].toUpperCase();
+    const list=DOCS[c.employment];
+    list.forEach((d,i)=>{ if(i<list.length-(opts.missing??1)) docs['main:'+d]=[{file:first+' - '+d+'.pdf',at:created+DAY}]; });
+    if(docs['main:Passport']&&ci%2===0) docs['main:Passport'].push({file:first+' - Passport (old).pdf',at:created+DAY});
+    if(idx>=FLOW.findIndex(f=>f.sub==='Valuation initiated')) docs['property:Title deed / SPA']=[{file:'Title deed - Unit '+(1000+ci*37)+'.pdf',at:created+2*DAY}];
+    if(idx>=FLOW.findIndex(f=>f.sub==='Pre-approved')) docs['bank:Pre-approval letter']=[{file:bank(b).short+' pre-approval - '+c.name+'.pdf',at:created+4*DAY}];
+    if(idx>=FLOW.findIndex(f=>f.sub==='FOL issued')) docs['bank:Final offer letter']=[{file:bank(b).short+' FOL - '+c.name+'.pdf',at:upd}];
+    return {id:uid('a'),appId:Math.random().toString(36).slice(2,8).toUpperCase()+Math.random().toString(36).slice(2,8).toUpperCase(),clientId:c.id,bankId:b,productId:prod?prod.id:'',
+      amount,property:prop,rate:prod?prod.rate:4.25,fixed:3,tenure:300,stl:'STL',type:['dib','adib','ei'].includes(b)?'Islamic':'Conventional',transaction:opts.tx||'Resale',caseType:'Residential',
+      banker:'Example Banker',bankerManager:'Example Manager',advisor:ma,brokerId,submittedBy:brokerId,source:opts.source||SOURCES[ci%SOURCES.length],status:opts.draft?'draft':'submitted',
+      stage:stageId,sub,created,updated:upd,unread:opts.unread||0,timeline,docs,
+      messages:opts.msgs||[],tasks:opts.tasks||[],commission:{received:stageId==='disbursed'&&opts.paid?upd:null},cto:null};
+  };
+  const hrs=h=>now-h*3600000;
+  const apps=[
+    A(2,'adib',800000,1000000,'processing','Review & Packaging',0,'u4',{unread:1,ma:'Sara Qureshi',msgs:[
+      {from:'broker',name:'Ravi Sharma',channel:'broker',text:'Uploaded the passport, visa, EID and the salary certificate. Client wants the 3-year fixed.',at:hrs(4)},
+      {from:'staff',name:'Sara Qureshi',channel:'broker',text:'All 4 documents received. Packaging the file for ADIB today. I will also need 12 months of company statements.',at:hrs(2)},
+      {from:'staff',name:'Sara Qureshi',channel:'internal',text:'Banker confirmed the 4.14% rate is valid until month end.',at:hrs(1.5)}]}),
+    A(0,'dib',605000,850000,'valuation','Valuation initiated',1,'u6',{unread:2,msgs:[{from:'staff',name:'Omar Farouk',channel:'client',text:'Hi Rahul, the valuer will call you today to book a visit.',at:hrs(26)}]}),
+    A(1,'dib',1750000,2400000,'preapproval','Pre-approved',7,'u5',{tx:'Off-plan'}),
+    A(7,'mashreq',578000,760000,'preapproval','Pre-approved',8,'u7',{}),
+    A(3,'adib',350000,480000,'preapproval','Submitted to bank',8,'u4',{missing:2}),
+    A(4,'enbd',1450000,1900000,'offer','FOL issued',2,'u8',{unread:1,tasks:[{id:uid('t'),text:'Get FOL signed by both applicants',due:now+DAY,done:false}]}),
+    A(6,'fab',3200000,4500000,'transfer','DLD transfer booked',3,'u6',{}),
+    A(9,'enbd',1100000,2000000,'disbursed','Disbursed',12,'u4',{paid:true}),
+    A(10,'cbd',1250000,1650000,'disbursed','Disbursed',5,'u7',{}),
+    A(11,'adcb',2100000,2800000,'processing','Submitted for final approval',4,'u5',{}),
+    A(5,'rak',900000,1300000,'preapproval','Documents collection',0,'u8',{missing:3}),
+    A(8,'mashreq',1600000,2200000,'declined','Declined by bank',15,'u6',{}),
+    A(8,'enbd',1600000,2200000,'preapproval','Submitted to bank',1,'u6',{}),
+    A(0,'enbd',605000,850000,'preapproval','Documents collection',0,'u4',{draft:true,updated:now-3600000})
+  ];
+  const L=(name,source,stage,d,budget,owner)=>({id:uid('l'),name,mobile:'+971 5'+Math.floor(10000000+Math.random()*89999999),source,stage,created:at(d),budget,owner,note:''});
+  const leads=[
+    L('Hassan Javed','Property Finder','New',0,1200000,'u4'),L('Chloe Martin','Website','New',1,2500000,'u6'),
+    L('Vikram Shah','WhatsApp','Contacted',2,900000,'u4'),L('Mariam Khoury','Meta ads','Contacted',3,1500000,'u7'),
+    L('Peter Novak','Referral partner','Qualified',4,3000000,'u5'),L('Reem Al Ali','Bayut','Qualified',6,1800000,'u8'),
+    L('Tom Fischer','Website','Docs pending',5,2200000,'u4'),L('Zainab Malik','Walk-in','Converted',12,700000,'u6'),
+    L('Ahmed Saleh','Meta ads','Lost',20,600000,'u7'),L('Lina Haddad','Referral partner','New',0,1350000,'u8')
+  ];
+  return {v:2,session:null,users,clients,apps,leads,products,rules:JSON.parse(JSON.stringify(SAMPLE_RULES)),proposals:[],
+    feedback:[{id:uid('f'),by:'u6',type:'Idea',text:'Can we get a WhatsApp alert when the bank issues the FOL?',at:at(1,15,10)}]};
+}
+
+/* ============ state ============ */
+const KEY='mortgagecrm.v2';
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY));}catch(e){S=null;}
+if(!S||S.v!==2) S=seed();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+const client=id=>S.clients.find(c=>c.id===id)||{name:'Unknown',employment:'Salaried'};
+const appById=id=>S.apps.find(a=>a.id===id);
+const user=id=>S.users.find(u=>u.id===id)||{name:'—',role:''};
+const me=()=>S.users.find(u=>u.id===S.session);
+const isStaff=()=>{const u=me();return !!u&&(u.role==='admin'||u.role==='advisor');};
+const isAdmin=()=>{const u=me();return !!u&&u.role==='admin';};
+const brokersOf=bid=>S.users.filter(u=>(u.role==='broker'||u.role==='manager')&&(!bid||u.brokerage===bid));
+function canSeeOwner(ownerId){const u=me();if(!u)return false;if(isStaff())return true;if(u.role==='manager')return user(ownerId).brokerage===u.brokerage;return ownerId===u.id;}
+const visibleApps=()=>S.apps.filter(a=>canSeeOwner(a.brokerId));
+const visibleLeads=()=>S.leads.filter(l=>canSeeOwner(l.owner));
+const hasDoc=(a,k)=>(a.docs[k]||[]).length>0;
+const commOf=a=>a.amount*bank(a.bankId).comm/100;
+const brokerPay=a=>commOf(a)*brokerage(user(a.brokerId).brokerage).share/100;
+function autoAdvisor(){const load=ADVISORS.map(m=>({m,n:S.apps.filter(a=>a.advisor===m&&!['disbursed','declined'].includes(a.stage)).length}));return load.sort((x,y)=>x.n-y.n)[0].m;}
+const ui={appTab:'submitted',period:'180',fStage:'',fBank:'',fMa:'',fBroker:'',q:'',sort:'updated',onlyToday:false,detailTab:'mortgage',docTab:'main',more:false,chan:'broker',leadForm:false,day:null};
+
+/* ============ shell ============ */
+const initials=n=>n.split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+function renderSide(active){
+  const u=me(); const staff=isStaff();
+  const unread=visibleApps().reduce((a,x)=>a+(x.unread||0),0);
+  const nav=[['dashboard','Dashboard','dash'],['leads','Leads','leads'],['applications','Applications','apps',unread],['proposals','Proposals','proposals'],['products','Bank products','products'],['bank-documents','Bank documents','docs'],['calculators','Calculators','calc'],['commissions',staff?'Commissions':'My payouts','coins'],['daily-updates','Daily updates','clock']];
+  if(staff) nav.push(['brokerages','Brokers','leads'],['reports','Reports','chart']);
+  $('#side').innerHTML=`
+   <a class="brand" href="#dashboard"><span class="logo">MC</span>${esc(BRAND)}</a>
+   <nav class="nav">${nav.map(([h,l,i,b])=>`<a href="#${h}" class="${active===h?'on':''}">${ic(i)}${l}${b?`<span class="badge">${b}</span>`:''}</a>`).join('')}</nav>
+   <div class="sep"></div>
+   <nav class="nav"><a href="#knowledge" class="${active==='knowledge'?'on':''}">${ic('help')}Knowledge hub</a></nav>
+   <div class="sep"></div>
+   <div class="label">Quick actions</div>
+   <nav class="nav quick">
+     <a href="#leads" data-act="quick-lead">${ic('plus')}Add lead</a>
+     <a href="#new-application">${ic('plus')}Submit application</a>
+     <a href="#proposals">${ic('plus')}Create proposal</a>
+     <a href="#cto" class="${active==='cto'?'on':''}">${ic('bolt')}CTO / ADB calculator</a>
+   </nav>
+   <a class="usercard" href="#profile" style="text-decoration:none"><span class="avatar">${esc(initials(u.name))}</span><div style="min-width:0;flex:1"><div style="font-weight:600">${esc(u.name)}</div><div class="small muted" style="text-transform:uppercase;letter-spacing:.03em;font-size:10.5px">${esc(u.brokerage?brokerage(u.brokerage).name:ROLE[u.role])}</div></div>${ic('edit','style="width:15px;height:15px;color:var(--muted)"')}</a>
+   <button class="ghost" data-act="logout" style="justify-content:flex-start">${ic('logout')}Log out</button>`;
+}
+
+/* ============ router ============ */
+const STAFF_ONLY=['brokerages','reports'];
+function route(){
+  let h=(location.hash||'#dashboard').slice(1);
+  let m, html, active=h;
+  $('#side').classList.remove('open');
+  if(!me()){ document.body.dataset.auth='out'; $('#view').innerHTML=vLogin(); refreshInbox(); window.scrollTo(0,0); return; }
+  document.body.dataset.auth='in';
+  if(h==='login'){ location.replace('#dashboard'); h='dashboard'; active=h; }
+  if((m=h.match(/^app-([a-z0-9]+)$/))){ active='applications'; const a=appById(m[1]); html=a&&canSeeOwner(a.brokerId)?vAppDetail(m[1]):`<div class="card"><h2>Application not found</h2><p class="muted" style="margin:0">It doesn't exist or it belongs to another broker.</p><a href="#applications">Back to applications</a></div>`; }
+  else if((m=h.match(/^cto-([a-z0-9]+)$/))){ active='cto'; const a=appById(m[1]); html=a&&canSeeOwner(a.brokerId)?vCto(m[1]):vCto(null); }
+  else if(h==='new-application') { active='applications'; html=vNewApp(); }
+  else if(STAFF_ONLY.includes(h)&&!isStaff()) html=`<div class="card"><h2>Not available</h2><p class="muted" style="margin:0">This page is for the ${esc(BRAND)} team only.</p></div>`;
+  else html=(VIEWS[h]||VIEWS.dashboard)();
+  renderSide(active);
+  $('#view').innerHTML=html;
+  after.forEach(f=>f()); after=[];
+  refreshInbox();
+  window.scrollTo(0,0);
+}
+let after=[];
+
+/* ============ shared bits ============ */
+const bankLogo=(id,full)=>{const b=bank(id);return `<span class="banklogo"><i style="background:${b.color}">${esc(b.short.slice(0,4))}</i>${esc(full?b.name:b.short)}</span>`;};
+const stagePill=a=>{const s=stage(a.stage);return `<span class="pill" style="--c:${s.c}">${esc(s.label)}</span>`;};
+function statusCell(a){return `<div class="status-cell">${stagePill(a)}<span>${esc(a.sub)}</span></div>`;}
+function addTimeline(a,stageId,sub,note){a.timeline.push({stage:stageId,sub,at:Date.now(),by:me().name,note:note||''});a.updated=Date.now();}
+
+/* ============ Login / profile ============ */
+function vLogin(){
+  const groups=[['Your team',S.users.filter(u=>u.role==='admin'||u.role==='advisor')],...BROKERAGES.map(b=>[b.name,S.users.filter(u=>u.brokerage===b.id)])];
+  return `<div class="login">
+    <div class="row" style="gap:12px"><span class="logo" style="width:44px;height:44px">MC</span><div><h1>${esc(BRAND)}</h1><div class="muted">Sign in to manage your mortgage applications</div></div></div>
+    <div class="notice info">Demo sign-in: pick a person to see the CRM the way they would. Brokers only see their own cases, brokerage managers see their brokerage, and your team sees everything. The real CRM signs in with email, password and a one-time code.</div>
+    <div id="sharedInbox"></div>
+    <section class="card"><h2>Testing this prototype</h2><p class="muted" style="margin:0">Thanks for trying it. Spend 10 minutes on these, then tell us what's missing, confusing or wrong.</p>
+      <ol style="margin:0;padding-left:20px;display:grid;gap:6px">
+        <li>Sign in as a broker (Ravi Sharma) and submit a new application.</li>
+        <li>Open one of his cases: upload documents and message the mortgage advisor.</li>
+        <li>Log out, sign in as the advisor (Sara Qureshi), move that case to the next stage and reply.</li>
+        <li>Open James Whitfield's case and run the CTO / ADB assessment from its CTO / ADB tab.</li>
+        <li>Look at Daily updates and Commissions from both sides.</li>
+      </ol>
+      <p class="small muted" style="margin:0">Use the <b>Feedback</b> tab on the right edge at any time. The data is made up and your changes stay in your own browser.</p></section>
+    ${groups.map(([g,us])=>`<section class="card"><h2>${esc(g)}</h2><div class="list">${us.map(u=>`<div class="li" style="align-items:center"><div class="row" style="gap:10px"><span class="avatar">${esc(initials(u.name))}</span><div><b style="font-weight:600">${esc(u.name)}</b><div class="small muted">${ROLE[u.role]}</div></div></div><button class="primary" data-act="login" data-id="${u.id}">Sign in</button></div>`).join('')}</div></section>`).join('')}
+    <button class="ghost" data-act="reset" style="justify-self:center;color:var(--muted)">Reset demo data</button></div>`;
+}
+function vProfile(){
+  const u=me();
+  return `<div><h1>Profile</h1><div class="muted">${ROLE[u.role]}${u.brokerage?' · '+esc(brokerage(u.brokerage).name):''}</div></div>
+  <form class="card" id="profileForm"><h2>Your details</h2><div class="grid-form">
+    <label class="field"><span>Full name</span><input value="${esc(u.name)}" disabled></label>
+    <label class="field"><span>Mobile</span><input id="pf-mobile" value="${esc(u.mobile)}"></label>
+    <label class="field"><span>Email</span><input id="pf-email" type="email" value="${esc(u.email)}"></label>
+    ${u.brokerage?`<label class="field"><span>Broker ID / licence number</span><input id="pf-license" value="${esc(u.license)}"></label><label class="field"><span>Brokerage</span><input value="${esc(brokerage(u.brokerage).name)}" disabled></label>`:''}
+  </div>
+  <h2>Notifications</h2>
+  <label class="row small" style="gap:8px;cursor:pointer"><input type="checkbox" id="pf-n1" style="width:auto" ${u.notifyEmail?'checked':''}>Email me when one of my applications changes stage</label>
+  <label class="row small" style="gap:8px;cursor:pointer"><input type="checkbox" id="pf-n2" style="width:auto" ${u.notifyDaily?'checked':''}>Send me the daily update summary at 6 pm</label>
+  <p class="small muted" style="margin:0">To change your name or brokerage, contact the ${esc(BRAND)} team.</p>
+  <div class="row"><button class="primary" type="submit">Save changes</button></div></form>`;
+}
+
+/* ============ Dashboard ============ */
+function vDashboard(){
+  const now=Date.now(),staff=isStaff(),u=me(),apps=visibleApps(),sub=apps.filter(a=>a.status==='submitted');
+  const active=sub.filter(a=>!['disbursed','declined'].includes(a.stage));
+  const monthStart=new Date(new Date().getFullYear(),new Date().getMonth(),1).getTime();
+  const disbMonth=sub.filter(a=>a.stage==='disbursed'&&a.updated>=monthStart);
+  const leads=visibleLeads(),conv=leads.filter(l=>l.stage==='Converted').length,closed=leads.filter(l=>['Converted','Lost'].includes(l.stage)).length;
+  const expList=sub.filter(a=>['offer','transfer','disbursed'].includes(a.stage)&&!a.commission.received);
+  const exp=expList.reduce((t,a)=>t+(staff?commOf(a)-brokerPay(a):brokerPay(a)),0);
+  const byStage=STAGES.map(s=>{const l=sub.filter(a=>a.stage===s.id);return {s,n:l.length,v:l.reduce((t,a)=>t+a.amount,0)};});
+  const maxV=Math.max(1,...byStage.map(x=>x.v));
+  const byBank=BANKS.map(b=>({b,n:active.filter(a=>a.bankId===b.id).length})).filter(x=>x.n).sort((a,b)=>b.n-a.n);
+  const maxB=Math.max(1,...byBank.map(x=>x.n));
+  const attention=[];
+  active.forEach(a=>{
+    const c=client(a.clientId), days=Math.floor((now-a.updated)/DAY);
+    if(days>=5) attention.push({a,t:`No update for ${days} days`,k:'var(--amber)'});
+    const req=DOCS[c.employment].filter(d=>!hasDoc(a,'main:'+d)).length;
+    if(req) attention.push({a,t:`${req} applicant document${req>1?'s':''} missing`,k:'var(--blue)'});
+    const e=(new Date(c.eidExpiry).getTime()-now)/DAY;
+    if(e<60) attention.push({a,t:`Emirates ID expires in ${Math.max(0,Math.round(e))} days`,k:'var(--red)'});
+  });
+  const recent=apps.flatMap(a=>a.timeline.map(t=>({a,t}))).sort((x,y)=>y.t.at-x.t.at).slice(0,7);
+  const tasks=apps.flatMap(a=>a.tasks.filter(t=>!t.done).map(t=>({a,t}))).sort((x,y)=>x.t.due-y.t.due);
+  return `
+  <div class="row spread"><div><h1>${staff?'Dashboard':'Welcome, '+esc(u.name.split(' ')[0])}</h1><div class="muted">Demo data · ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}${u.role==='manager'?' · showing all of '+esc(brokerage(u.brokerage).name):''}</div></div>
+   <a class="btn primary" href="#new-application">${ic('plus')}New application</a></div>
+  <div class="kpis">
+    <div class="kpi"><span class="label">${staff?'Active applications':'My active cases'}</span><span class="v">${active.length}</span><span class="small muted">${AED(active.reduce((t,a)=>t+a.amount,0))} in pipeline</span></div>
+    <div class="kpi"><span class="label">Disbursed this month</span><span class="v">${AED(disbMonth.reduce((t,a)=>t+a.amount,0))}</span><span class="small muted">${disbMonth.length} case${disbMonth.length===1?'':'s'}</span></div>
+    <div class="kpi"><span class="label">${staff?'Net commission expected':'Payout expected'}</span><span class="v">${AED(exp)}</span><span class="small muted">${staff?'After broker payouts, offer stage onwards':'Your share, offer stage onwards'}</span></div>
+    <div class="kpi"><span class="label">Lead conversion</span><span class="v">${closed?Math.round(conv/closed*100):0}%</span><span class="small muted">${leads.filter(l=>!['Converted','Lost'].includes(l.stage)).length} open leads</span></div>
+  </div>
+  ${isAdmin()?'<div id="sharedInbox"></div>':''}
+  <div class="two">
+    <section class="card"><h2>Pipeline by stage</h2><div class="bars">${byStage.map(x=>`<div class="barrow"><span>${x.s.label} <span class="muted">(${x.n})</span></span><div class="track"><div class="fill" style="width:${x.v/maxV*100}%;--c:${x.s.c}"></div></div><span class="num small" style="text-align:right">${AED(x.v)}</span></div>`).join('')}</div></section>
+    <section class="card"><h2>Active cases by bank</h2><div class="bars">${byBank.map(x=>`<div class="barrow"><span>${esc(x.b.short)}</span><div class="track"><div class="fill" style="width:${x.n/maxB*100}%;--c:${x.b.color}"></div></div><span class="num small" style="text-align:right">${x.n}</span></div>`).join('')||'<p class="muted">No active cases.</p>'}</div></section>
+  </div>
+  <div class="two">
+    <section class="card"><div class="row spread"><h2>Needs attention</h2><span class="muted small">${attention.length} items</span></div>
+      <div class="list">${attention.slice(0,8).map(x=>`<a class="li" href="#app-${x.a.id}" style="text-decoration:none"><div><b style="font-weight:500">${esc(client(x.a.clientId).name)}</b> <span class="muted small">· ${esc(bank(x.a.bankId).short)}${staff?' · '+esc(user(x.a.brokerId).name):''}</span><div class="small" style="color:${x.k}">${esc(x.t)}</div></div>${stagePill(x.a)}</a>`).join('')||'<p class="muted">Nothing needs attention.</p>'}</div></section>
+    <section class="card"><h2>Recent activity</h2><div class="list">${recent.map(x=>`<a class="li" href="#app-${x.a.id}" style="text-decoration:none"><div><b style="font-weight:500">${esc(client(x.a.clientId).name)}</b> <span class="muted">·</span> ${esc(x.t.sub)}<div class="small muted">${esc(x.t.by)} · ${rel(x.t.at)}</div></div></a>`).join('')||'<p class="muted">No activity yet.</p>'}</div></section>
+  </div>
+  <div class="two">
+    <section class="card"><h2>Open tasks</h2><div class="list">${tasks.map(x=>`<div class="li"><div>${esc(x.t.text)}<div class="small muted">${esc(client(x.a.clientId).name)} · due ${dstr(x.t.due)}</div></div><a class="btn" href="#app-${x.a.id}">Open</a></div>`).join('')||'<p class="muted">No open tasks. Add tasks from an application.</p>'}</div></section>
+    ${isAdmin()?`<section class="card"><div class="row spread"><h2>Feedback inbox</h2><span class="small muted">${S.feedback.length} received</span></div><div class="list">${S.feedback.slice().reverse().slice(0,6).map(f=>`<div class="li"><div><span class="pill" style="--c:${f.type==='Problem'?'var(--red)':f.type==='Idea'?'var(--teal)':'var(--grey)'}">${esc(f.type)}</span> ${esc(f.text)}<div class="small muted">${esc(user(f.by).name)} · ${rel(f.at)}</div></div></div>`).join('')||'<p class="muted">No feedback yet.</p>'}</div></section>`:''}
+  </div>`;
+}
+
+/* ============ Leads ============ */
+function vLeads(){
+  const staff=isStaff(),u=me(),list=visibleLeads();
+  const owners=staff?brokersOf():u.role==='manager'?brokersOf(u.brokerage):[u];
+  const cols=LEAD_STAGES.map(st=>{
+    const l=list.filter(x=>x.stage===st).sort((a,b)=>b.created-a.created);
+    return `<div class="col"><h3><span>${st}</span><span class="muted">${l.length}</span></h3>${l.map(x=>`
+      <div class="lead"><div class="row spread"><b style="font-weight:600">${esc(x.name)}</b><span class="small muted">${rel(x.created).replace(/ \d.*$/,'')}</span></div>
+      <div class="small muted">${esc(x.source)} · Budget ${AED(x.budget)}</div><div class="small muted">${esc(x.mobile)}${owners.length>1?' · '+esc(user(x.owner).name):''}</div>
+      <div class="row" style="gap:6px"><select data-act="lead-stage" data-id="${x.id}" aria-label="Stage for ${esc(x.name)}" style="flex:1">${LEAD_STAGES.map(s=>`<option${s===x.stage?' selected':''}>${s}</option>`).join('')}</select>
+      ${['Qualified','Docs pending'].includes(x.stage)?`<button class="primary" data-act="lead-convert" data-id="${x.id}" style="padding:5px 9px;font-size:12px">Convert</button>`:''}</div></div>`).join('')||'<p class="small muted" style="padding:4px">No leads</p>'}</div>`;
+  }).join('');
+  return `
+  <div class="row spread"><div><h1>Leads</h1><div class="muted">${list.length} leads · move a lead with its stage menu, convert qualified leads into applications</div></div>
+   <button class="primary" data-act="toggle-lead-form">${ic('plus')}Add lead</button></div>
+  <form class="card" id="leadForm" ${ui.leadForm?'':'hidden'}>
+    <h2>New lead</h2>
+    <div class="grid-form">
+      <label class="field"><span>Full name</span><input id="lf-name" required></label>
+      <label class="field"><span>Mobile</span><input id="lf-mobile" placeholder="+971 5x xxx xxxx" required></label>
+      <label class="field"><span>Source</span><select id="lf-source">${SOURCES.map(s=>`<option>${s}</option>`).join('')}</select></label>
+      <label class="field"><span>Property budget (AED)</span><input id="lf-budget" type="number" min="0" value="1000000"></label>
+      <label class="field" ${owners.length>1?'':'hidden'}><span>Broker</span><select id="lf-owner">${owners.map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join('')}</select></label>
+    </div>
+    <div class="row"><button class="primary" type="submit">Save lead</button><button type="button" data-act="toggle-lead-form">Cancel</button></div>
+  </form>
+  <div class="board">${cols}</div>`;
+}
+
+/* ============ Applications list ============ */
+function filteredApps(){
+  const now=Date.now(),t0=new Date().setHours(0,0,0,0);
+  let l=visibleApps().filter(a=>a.status===ui.appTab);
+  if(ui.period!=='all') l=l.filter(a=>a.updated>=now-(+ui.period)*DAY);
+  if(ui.fStage) l=l.filter(a=>a.stage===ui.fStage);
+  if(ui.fBank) l=l.filter(a=>a.bankId===ui.fBank);
+  if(ui.fMa) l=l.filter(a=>a.advisor===ui.fMa);
+  if(ui.fBroker) l=l.filter(a=>a.brokerId===ui.fBroker);
+  if(ui.onlyToday) l=l.filter(a=>a.updated>=t0);
+  if(ui.q) l=l.filter(a=>client(a.clientId).name.toLowerCase().includes(ui.q.toLowerCase()));
+  const s={updated:(a,b)=>b.updated-a.updated,amount:(a,b)=>b.amount-a.amount,client:(a,b)=>client(a.clientId).name.localeCompare(client(b.clientId).name),created:(a,b)=>b.created-a.created}[ui.sort];
+  return l.sort(s);
+}
+function appRows(){
+  const l=filteredApps(),showBroker=me().role!=='broker';
+  $('#appTotal').textContent='Total '+l.length;
+  $('#appBody').innerHTML=l.map(a=>`<tr class="link" data-href="#app-${a.id}" tabindex="0">
+    <td style="max-width:200px"><b style="font-weight:500">${esc(client(a.clientId).name)}</b></td>
+    <td>${a.unread?`<span class="badge" title="${a.unread} unread">${a.unread}</span>`:''}</td>
+    <td>${bankLogo(a.bankId)}</td>
+    <td class="num nowrap">${AED(a.amount)}</td>
+    <td>${statusCell(a)}</td>
+    ${showBroker?`<td class="nowrap">${esc(user(a.brokerId).name)}${isStaff()?`<div class="small muted">${esc(brokerage(user(a.brokerId).brokerage).name)}</div>`:''}</td>`:''}
+    <td class="nowrap">${rel(a.updated)}${a.updated>=new Date().setHours(0,0,0,0)?'<span class="dot"></span>':''}</td>
+    <td class="r"><button class="icon-btn" data-act="dup" data-id="${a.id}" aria-label="Duplicate to another bank" title="Duplicate to another bank">${ic('copy')}</button></td></tr>`).join('')||`<tr><td colspan="8"><div class="empty">${ic('apps','style="width:28px;height:28px"')}<span>No applications match these filters.</span></div></td></tr>`;
+}
+function vApps(){
+  const t0=new Date().setHours(0,0,0,0),u=me();
+  const today=visibleApps().filter(a=>a.status==='submitted'&&a.updated>=t0).length;
+  const brokerOpts=isStaff()?brokersOf():u.role==='manager'?brokersOf(u.brokerage):[];
+  after.push(appRows);
+  const opt=(v,l,cur)=>`<option value="${v}"${v===cur?' selected':''}>${esc(l)}</option>`;
+  return `
+  <div class="row spread"><h1>Applications</h1>
+   <div class="row"><div class="search">${ic('search')}<input id="appSearch" placeholder="Search by client name" value="${esc(ui.q)}" aria-label="Search by client name"></div>
+   <a class="btn primary" href="#new-application">${ic('plus')}New application</a></div></div>
+  <div class="row">
+    <div class="seg" role="group" aria-label="Application status"><button data-act="apptab" data-v="submitted" aria-pressed="${ui.appTab==='submitted'}">Submitted</button><button data-act="apptab" data-v="draft" aria-pressed="${ui.appTab==='draft'}">Drafts</button></div>
+    <select class="filter" data-f="period" aria-label="Period">${opt('30','Last 30 days',ui.period)}${opt('90','Last 3 months',ui.period)}${opt('180','Last 6 months',ui.period)}${opt('365','Last 12 months',ui.period)}${opt('all','All time',ui.period)}</select>
+    <select class="filter" data-f="fStage" aria-label="Status">${opt('','Status',ui.fStage)}${ALLST.map(s=>opt(s.id,s.label,ui.fStage)).join('')}</select>
+    <select class="filter" data-f="fBank" aria-label="Bank">${opt('','Bank',ui.fBank)}${BANKS.map(b=>opt(b.id,b.short,ui.fBank)).join('')}</select>
+    <select class="filter" data-f="fMa" aria-label="Mortgage advisor">${opt('','Mortgage advisor',ui.fMa)}${ADVISORS.map(m=>opt(m,m,ui.fMa)).join('')}</select>
+    ${brokerOpts.length?`<select class="filter" data-f="fBroker" aria-label="Broker">${opt('','Broker',ui.fBroker)}${brokerOpts.map(b=>opt(b.id,b.name,ui.fBroker)).join('')}</select>`:''}
+    <button class="ghost" data-act="today" aria-pressed="${ui.onlyToday}" style="${ui.onlyToday?'color:var(--accent)':''}">${ic('clock')}${today} update${today===1?'':'s'} today</button>
+  </div>
+  <div class="row spread"><span id="appTotal" class="muted"></span>
+    <div class="row"><button class="ghost" data-act="csv">${ic('download')}Copy CSV</button>
+    <label class="row" style="gap:6px">${ic('sort','style="width:16px;height:16px"')}<select class="filter" data-f="sort" aria-label="Sort by">${opt('updated','Last updated',ui.sort)}${opt('created','Newest',ui.sort)}${opt('amount','Mortgage amount',ui.sort)}${opt('client','Client name',ui.sort)}</select></label></div></div>
+  <div class="card flush"><div class="scroll"><table><thead><tr><th>Client name</th><th>Updates</th><th>Bank</th><th>Mortgage amount</th><th>Status</th>${u.role!=='broker'?'<th>Broker</th>':''}<th>Last updated</th><th></th></tr></thead><tbody id="appBody"></tbody></table></div></div>`;
+}
+
+/* ============ Application detail ============ */
+function vAppDetail(id){
+  const a=appById(id);
+  if(a.unread){a.unread=0;save();}
+  const c=client(a.clientId), b=bank(a.bankId), staff=isStaff(), br=user(a.brokerId);
+  const idx=STAGES.findIndex(x=>x.id===a.stage);
+  const step=STAGES.map((x,i)=>{const cls=idx<0?'':i<idx?'done':i===idx?(a.stage==='disbursed'?'done':'now'):'';return `<div class="step ${cls}"><div class="bar"></div><span>${x.label}</span></div>`;}).join('');
+  const ltv=a.amount/a.property*100, monthly=emi(a.amount,a.rate,a.tenure);
+  const opts=ALLST.map(st=>`<optgroup label="${st.label}">${st.subs.map(sb=>`<option value="${st.id}|${esc(sb)}"${st.id===a.stage&&sb===a.sub?' selected':''}>${esc(sb)}</option>`).join('')}</optgroup>`).join('');
+  const chans=staff?[['broker','Broker'],['client','Client'],['internal','Internal notes']]:[['broker',BRAND+' team'],['client','Client']];
+  if(!chans.find(x=>x[0]===ui.chan)) ui.chan='broker';
+  const msgs=a.messages.filter(m=>(m.channel||'broker')===ui.chan);
+  const ph={broker:staff?'Message '+br.name.split(' ')[0]+' (broker)':'Send message to '+BRAND,client:'Message the client',internal:'Add an internal note (team only)'}[ui.chan];
+  return `
+  <div class="row spread"><div class="crumbs"><a href="#applications">Applications</a><span>›</span><b>${esc(c.name)} - ${esc(b.short)}</b></div>
+    <div class="row"><button class="icon-btn" data-act="share" data-id="${a.id}" aria-label="Copy link" title="Copy link">${ic('share')}</button><button class="primary" data-act="dup" data-id="${a.id}">${ic('copy')}Duplicate / add application</button></div></div>
+  <section class="card">
+    <div class="row spread" style="align-items:flex-start">
+      <div style="display:grid;gap:4px"><span class="muted">App. ID: ${esc(a.appId)}${a.status==='draft'?' · <b>Draft</b>':''}</span><h1 style="font-size:21px">${esc(c.name)}</h1>
+      <span class="muted">Mortgage advisor: <b style="color:var(--fg);font-weight:500">${esc(a.advisor)}</b> &nbsp;|&nbsp; Broker: <b style="color:var(--fg);font-weight:500">${esc(br.name)}</b></span></div>
+      <div class="row"><span class="muted">${esc(a.sub)}</span>${stagePill(a)}</div>
+    </div>
+    <div class="stepper" aria-label="Progress">${step}</div>
+    <div class="row">${staff?`<label class="field grow" style="max-width:340px"><span>Move to stage</span><select data-act="move" data-id="${a.id}">${opts}</select></label>`:`<span class="small muted">Your mortgage advisor updates the stage as the bank responds. You'll be notified of each change.</span>`}
+    ${a.status==='draft'?`<button class="primary" data-act="submit-draft" data-id="${a.id}" style="align-self:end">Submit application</button>`:''}</div>
+  </section>
+  <div class="detail-grid">
+    <div style="display:grid;gap:18px;min-width:0">
+      <section class="card"><h2>Application details</h2>
+        <div class="seg" role="tablist">${[['mortgage','Mortgage'],['main','Main applicant'],['co','Co-applicant'],['cto','CTO / ADB']].map(([k,l])=>`<button data-act="dtab" data-v="${k}" aria-pressed="${ui.detailTab===k}">${l}</button>`).join('')}</div>
+        ${detailTab(a,c)}
+      </section>
+      <section class="card"><div class="row spread"><h2>Documents</h2><button class="ghost" data-act="request-docs" data-id="${a.id}">Copy request for missing docs</button></div>
+        <div class="seg">${[['main','Main applicant'],['co','Co-applicant'],['property','Title deed / property'],['bank','Bank document']].map(([k,l])=>`<button data-act="doctab" data-v="${k}" aria-pressed="${ui.docTab===k}">${l}</button>`).join('')}</div>
+        ${docsTab(a,c)}
+      </section>
+      <section class="card"><div class="row spread"><h2>Timeline</h2><span class="small muted">Last updated ${dtstr(a.updated)}</span></div>${timeline(a)}</section>
+      <section class="card"><h2>Tasks</h2>
+        <div class="list">${a.tasks.map(t=>`<label class="li" style="justify-content:flex-start;cursor:pointer"><input type="checkbox" data-act="task" data-id="${a.id}" data-t="${t.id}" ${t.done?'checked':''} style="width:auto;margin-top:3px"><div style="${t.done?'text-decoration:line-through;color:var(--muted)':''}">${esc(t.text)}<div class="small muted">Due ${dstr(t.due)}</div></div></label>`).join('')||'<p class="muted small" style="margin:0">No tasks yet.</p>'}</div>
+        <form class="row" id="taskForm" data-id="${a.id}"><input id="taskText" placeholder="Add a task, e.g. Book valuation" class="grow" style="flex:1 1 200px" required><input id="taskDue" type="date" style="width:auto" value="${new Date(Date.now()+2*DAY).toISOString().slice(0,10)}" aria-label="Due date"><button type="submit">Add task</button></form>
+      </section>
+    </div>
+    <div style="display:grid;gap:18px;min-width:0">
+      <section class="card"><h2>Key figures</h2><div class="kv">
+        <div><span>Monthly payment (est.)</span><b class="num">${AED(monthly)}</b></div><div><span>LTV</span><b class="num">${ltv.toFixed(1)}%</b></div>
+        <div><span>${staff?'Bank commission':'Your payout (est.)'}</span><b class="num">${AED(staff?commOf(a):brokerPay(a))}</b></div><div><span>Days open</span><b class="num">${Math.floor((Date.now()-a.created)/DAY)}</b></div></div></section>
+      <section class="card chat"><div style="padding:14px 14px 0;display:grid;gap:10px"><h2>Messages</h2><div class="seg">${chans.map(([k,l])=>{const n=a.messages.filter(m=>(m.channel||'broker')===k).length;return `<button data-act="chan" data-v="${k}" aria-pressed="${ui.chan===k}">${esc(l)}${n?` <span class="muted">(${n})</span>`:''}</button>`;}).join('')}</div></div>
+        <div class="msgs" id="msgs">${msgs.length?msgs.map(m=>`<div class="msg ${m.from==='sys'?'sys':m.name===me().name?'me':''} ${ui.chan==='internal'&&m.from!=='sys'?'note':''}">${m.from==='sys'?esc(m.text)+' · '+rel(m.at):`<span class="meta">${esc(m.name)} · ${rel(m.at)}</span><span>${esc(m.text)}</span>`}</div>`).join(''):`<div class="empty" style="margin:auto">${ic('proposals','style="width:26px;height:26px"')}<span>No messages yet</span></div>`}</div>
+        <form class="compose" id="msgForm" data-id="${a.id}"><textarea id="msgText" rows="2" placeholder="${esc(ph)}" required></textarea>
+        <div class="row spread"><span class="small muted">${ui.chan==='internal'?'Only your team can see these notes.':ui.chan==='client'?'In the full CRM this sends on WhatsApp.':staff?'Visible to the broker on this case.':'Goes to your mortgage advisor.'}</span><button class="primary" type="submit">Send</button></div></form></section>
+    </div>
+  </div>`;
+}
+function detailTab(a,c){
+  if(ui.detailTab==='main') return `<div class="kv">
+    <div><span>Full name</span><b>${esc(c.name)}</b></div><div><span>Residency</span><b>${esc(c.residency)}</b></div>
+    <div><span>Employment</span><b>${esc(c.employment)}</b></div><div><span>${c.employment==='Salaried'?'Monthly salary':'Company'}</span><b>${c.employment==='Salaried'?AED(c.salary):esc(c.company)}</b></div>
+    <div><span>Mobile number</span><b>${esc(c.mobile||'-')}</b></div><div><span>Email</span><b>${esc(c.email||'-')}</b></div>
+    <div><span>Nationality</span><b>${esc(c.nationality||'-')}</b></div><div><span>Existing EMIs / card limits</span><b>${AED(c.emis)} / ${AED(c.cards)}</b></div>
+    <div><span>Emirates ID expiry</span><b>${dstr(c.eidExpiry)}</b></div><div><span>Passport expiry</span><b>${dstr(c.passportExpiry)}</b></div></div>`;
+  if(ui.detailTab==='co') return c.co?`<div class="kv"><div><span>Full name</span><b>${esc(c.co.name)}</b></div><div><span>Employment</span><b>${esc(c.co.employment)}</b></div><div><span>Monthly salary</span><b>${AED(c.co.salary)}</b></div><div><span>Relationship</span><b>Spouse</b></div></div>`
+    :`<div class="empty"><span>No co-applicant on this application.</span><button data-act="add-co" data-id="${a.id}">${ic('plus')}Add co-applicant</button></div>`;
+  if(ui.detailTab==='cto'){
+    if(c.employment!=='Self-employed') return `<p class="muted" style="margin:0">CTO and ADB apply to self-employed applicants. ${esc(c.name)} is salaried, so banks assess income from the salary certificate.</p><a class="btn" href="#cto-${a.id}" style="justify-self:start">Open calculator anyway</a>`;
+    if(!a.cto) return `<p class="muted" style="margin:0">No CTO / ADB assessment yet. Upload the company bank statements to see which banks qualify and the maximum loan at each.</p><a class="btn primary" href="#cto-${a.id}" style="justify-self:start">${ic('bolt')}Run CTO / ADB assessment</a>`;
+    const r=a.cto;
+    return `<div class="row spread"><span class="muted small">Saved ${rel(r.at)} · ${r.months} months of statements</span><a class="btn" href="#cto-${a.id}">Open calculator</a></div>
+      <div class="scroll bordered"><table class="tbl-sm"><thead><tr><th>Bank</th><th class="r">Eligible CTO</th><th class="r">ADB</th><th class="r">Max loan</th><th>Result</th></tr></thead><tbody>
+      ${r.rows.map(x=>`<tr><td>${esc(bank(x.bankId).short)}</td><td class="r num">${fmt(x.cto)}</td><td class="r num">${fmt(x.adb)}</td><td class="r num"><b>${x.maxLoan?fmt(x.maxLoan):'—'}</b></td><td>${ctoPill(x.status)}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+  const p=S.products.find(x=>x.id===a.productId), br=user(a.brokerId);
+  const base=`<div class="kv">
+    <div><span>Bank</span><b>${bankLogo(a.bankId,true)}</b></div><div><span>Rate</span><b>${a.rate}%${a.fixed?` (${a.fixed} years fixed)`:' (variable)'}</b></div>
+    <div><span>Submission amount</span><b class="num">${AED(a.amount)}</b></div><div><span>Property amount</span><b class="num">${AED(a.property)}</b></div>`;
+  const more=`<div><span>Tenure</span><b>${a.tenure} months</b></div><div><span>LTV</span><b>${Math.round(a.amount/a.property*100)}%</b></div>
+    <div><span>Salary transfer</span><b>${esc(a.stl)}</b></div><div><span>Mortgage type</span><b>${esc(a.type)}</b></div>
+    <div><span>Transaction type</span><b>${esc(a.transaction)}</b></div><div><span>Case type</span><b>${esc(a.caseType)}</b></div>
+    <div><span>Banker</span><b>${esc(a.banker)}</b></div><div><span>Banker manager</span><b>${esc(a.bankerManager)}</b></div>
+    <div><span>Submitted by</span><b>${esc(user(a.submittedBy).name)}</b></div><div><span>Brokerage</span><b>${esc(brokerage(br.brokerage).name)}</b></div>
+    <div><span>Mortgage advisor</span><b>${esc(a.advisor)}</b></div><div><span>Product</span><b>${esc(p?p.name:'—')}</b></div>
+    <div><span>Lead source</span><b>${esc(a.source)}</b></div><div><span>Created</span><b>${dtstr(a.created)}</b></div>`;
+  return base+(ui.more?more:'')+`</div><button class="linkbtn" data-act="more" style="justify-self:start">${ui.more?'View less ▴':'View more ▾'}</button>`;
+}
+function docsTab(a,c){
+  let cat=ui.docTab,list;
+  if(cat==='main') list=DOCS[c.employment];
+  else if(cat==='co'){ if(!c.co) return `<p class="muted" style="margin:0">No co-applicant on this application.</p>`; list=DOCS[c.co.employment]; }
+  else list=DOCS[cat];
+  const files=k=>a.docs[k]||[];
+  const got=list.filter(d=>files(cat+':'+d).length).length;
+  const total=Object.keys(a.docs).filter(k=>k.startsWith(cat+':')).reduce((t,k)=>t+files(k).length,0);
+  const fileLines=k=>files(k).map((f,i)=>`<div class="small row" style="gap:6px"><a href="#app-${a.id}" data-act="open-doc" style="color:var(--accent)">${esc(f.file)}</a><span class="muted">· ${rel(f.at)}</span><button class="linkbtn small" data-act="rm-doc" data-id="${a.id}" data-k="${esc(k)}" data-i="${i}" style="color:var(--muted)" aria-label="Remove ${esc(f.file)}">Remove</button></div>`).join('');
+  const up=(k,label,txt)=>`<label class="btn upl small" style="padding:5px 10px">${ic('upload')}${txt}<input type="file" multiple data-act="upload" data-id="${a.id}" data-k="${esc(k)}" aria-label="Upload ${esc(label)}"></label>`;
+  const ok=files(cat+':__other');
+  return `<div class="row spread"><span class="muted">Total ${total} file${total===1?'':'s'} · ${got} of ${list.length} required items received</span>${total?`<button class="ghost" data-act="dl-all">${ic('download')}Download all</button>`:''}</div>
+  <div class="doclist">${list.map(d=>{const k=cat+':'+d,has=files(k).length;return `<div class="doc ${has?'ok':'miss'}">${ic(has?'check':'file','class="ic"')}
+    <div class="nm"><div style="font-weight:500">${esc(d)}${has>1?` <span class="muted small">(${has} files)</span>`:''}</div>${has?fileLines(k):'<div class="small muted">Missing</div>'}</div>${up(k,d,has?'Add':'Upload')}</div>`;}).join('')}
+    <div class="doc">${ic('file','class="ic"')}<div class="nm"><div style="font-weight:500">Other files</div>${ok.length?fileLines(cat+':__other'):'<div class="small muted">Anything else for this section</div>'}</div>${up(cat+':__other','other files','Add')}</div></div>`;
+}
+function timeline(a){
+  if(['declined','hold'].includes(a.stage)){
+    return `<div class="timeline">${a.timeline.slice().reverse().map((t,i)=>`<div class="tl ${i===0?'now':'done'}"><i>${ic(i===0?'clock':'check')}</i><div><b style="font-weight:500">${esc(t.sub)}</b><div class="small muted">${dtstr(t.at)} · ${esc(t.by)}${t.note?' · '+esc(t.note):''}</div></div></div>`).join('')}</div>`;
+  }
+  const cur=FLOW.findIndex(f=>f.stage===a.stage&&f.sub===a.sub);
+  const hist=t=>a.timeline.slice().reverse().find(x=>x.sub===t);
+  const rows=FLOW.map((f,i)=>({f,i})).filter(({i})=>i<=cur+1).reverse();
+  const created=a.timeline[0];
+  return `<div class="timeline">${rows.map(({f,i})=>{const h=hist(f.sub);const cls=i<cur||a.stage==='disbursed'?'done':i===cur?'now':'';
+    return `<div class="tl ${cls}"><i>${cls==='done'?ic('check'):cls==='now'?ic('clock'):''}</i><div><b style="font-weight:500">${esc(f.sub)}</b><div class="small muted">${cls==='now'?'In progress':cls==='done'&&h?dtstr(h.at)+' · '+esc(h.by):'Next step'}</div></div></div>`;}).join('')}
+    <div class="tl done"><i>${ic('check')}</i><div><b style="font-weight:500">Application created</b><div class="small muted">${dtstr(created.at)} · ${esc(created.by)}</div></div></div></div>`;
+}
+
+/* ============ New application ============ */
+function vNewApp(){
+  const pre=ui.prefillClient?client(ui.prefillClient):null, u=me(), staff=isStaff();
+  const brokerOpts=staff?brokersOf():u.role==='manager'?brokersOf(u.brokerage):[];
+  const opt=(arr,cur)=>arr.map(v=>`<option${v===cur?' selected':''}>${esc(v)}</option>`).join('');
+  return `
+  <div class="crumbs"><a href="#applications">Applications</a><span>›</span><b>New application</b></div>
+  <h1>New application</h1>
+  <form id="newApp" class="detail-grid">
+    <div style="display:grid;gap:18px">
+      <section class="card"><h2>Client</h2>
+        <label class="field"><span>Existing client</span><select id="na-client"><option value="">New client</option>${S.clients.filter(c=>staff||visibleApps().some(a=>a.clientId===c.id)).map(c=>`<option value="${c.id}"${pre&&pre.id===c.id?' selected':''}>${esc(c.name)}</option>`).join('')}</select></label>
+        <div class="grid-form" id="na-newclient" ${pre?'hidden':''}>
+          <label class="field"><span>Full name</span><input id="na-name" value="${esc(ui.prefillName||'')}"></label>
+          <label class="field"><span>Mobile</span><input id="na-mobile" value="${esc(ui.prefillMobile||'')}"></label>
+          <label class="field"><span>Email</span><input id="na-email" type="email"></label>
+          <label class="field"><span>Nationality</span><input id="na-nat"></label>
+          <label class="field"><span>Residency</span><select id="na-res">${opt(['UAE Resident','UAE National','Non-resident'])}</select></label>
+          <label class="field"><span>Employment</span><select id="na-emp">${opt(['Salaried','Self-employed'])}</select></label>
+          <label class="field"><span>Monthly salary (AED)</span><input id="na-salary" type="number" min="0" value="0"></label>
+          <label class="field"><span>Existing monthly EMIs (AED)</span><input id="na-emis" type="number" min="0" value="0"></label>
+          <label class="field"><span>Credit card limits (AED)</span><input id="na-cards" type="number" min="0" value="0"></label>
+        </div>
+      </section>
+      <section class="card"><h2>Mortgage</h2><div class="grid-form">
+        <label class="field"><span>Bank</span><select id="na-bank">${BANKS.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select></label>
+        <label class="field"><span>Product</span><select id="na-product"></select></label>
+        <label class="field"><span>Property value (AED)</span><input id="na-prop" type="number" min="0" value="${ui.prefillBudget||1000000}"></label>
+        <label class="field"><span>Loan amount (AED)</span><input id="na-amount" type="number" min="0" value="${Math.round((ui.prefillBudget||1000000)*0.8)}"></label>
+        <label class="field"><span>Tenure (months)</span><input id="na-tenure" type="number" min="12" max="300" value="300"></label>
+        <label class="field"><span>Transaction type</span><select id="na-tx">${opt(['Resale','Off-plan','Handover','Buyout','Equity release'])}</select></label>
+        <label class="field"><span>Case type</span><select id="na-case">${opt(['Residential','Commercial'])}</select></label>
+        <label class="field"><span>Salary transfer</span><select id="na-stl">${opt(['STL','NSTL'])}</select></label>
+        <label class="field"><span>Lead source</span><select id="na-source">${opt(SOURCES)}</select></label>
+        ${brokerOpts.length?`<label class="field"><span>Broker</span><select id="na-broker">${brokerOpts.map(b=>`<option value="${b.id}"${b.id===(ui.prefillBroker||u.id)?' selected':''}>${esc(b.name)}</option>`).join('')}</select></label>`:''}
+        ${staff?`<label class="field"><span>Mortgage advisor</span><select id="na-ma">${opt(ADVISORS,autoAdvisor())}</select></label>`:''}
+      </div>${staff?'':`<p class="small muted" style="margin:0">A ${esc(BRAND)} mortgage advisor is assigned automatically when you submit.</p>`}</section>
+    </div>
+    <section class="card" style="position:sticky;top:16px"><h2>Summary</h2><div id="na-summary" class="kv"></div>
+      <div class="row"><button type="submit" class="primary" data-mode="submitted">Submit application</button><button type="submit" data-mode="draft">Save as draft</button></div></section>
+  </form>`;
+}
+function naUpdate(){
+  if(!$('#na-bank')) return;
+  const b=$('#na-bank').value, ps=S.products.filter(p=>p.bankId===b), cur=$('#na-product').value;
+  if(!ps.find(p=>p.id===cur)) $('#na-product').innerHTML=ps.map(p=>`<option value="${p.id}">${esc(p.name)} · ${p.rate}%</option>`).join('');
+  const p=S.products.find(x=>x.id===$('#na-product').value);
+  const amt=+$('#na-amount').value||0, prop=+$('#na-prop').value||1, ten=+$('#na-tenure').value||300;
+  const cid=$('#na-client').value; const c=cid?client(cid):{salary:+$('#na-salary').value||0,emis:+$('#na-emis').value||0,cards:+$('#na-cards').value||0,employment:$('#na-emp').value};
+  const m=emi(amt,p?p.rate:4.5,ten), dbr=c.salary?((m+c.emis+c.cards*0.05)/c.salary*100):null;
+  const brId=$('#na-broker')?$('#na-broker').value:me().id;
+  const pay=amt*bank(b).comm/100*brokerage(user(brId).brokerage).share/100;
+  $('#na-newclient').hidden=!!cid;
+  $('#na-summary').innerHTML=`<div><span>LTV</span><b>${(amt/prop*100).toFixed(1)}%</b></div><div><span>Rate</span><b>${p?p.rate+'%':'—'}</b></div>
+   <div><span>Monthly payment</span><b class="num">${AED(m)}</b></div><div><span>DBR</span><b style="${dbr>50?'color:var(--red)':''}">${dbr===null?(c.employment==='Self-employed'?'Use CTO / ADB':'Add salary'):dbr.toFixed(1)+'%'+(dbr>50?' (over 50%)':'')}</b></div>
+   <div><span>${isStaff()?'Bank commission (est.)':'Your payout (est.)'}</span><b class="num">${AED(isStaff()?amt*bank(b).comm/100:pay)}</b></div><div><span>Upfront costs (est.)</span><b class="num">${AED(prop*0.04+amt*0.0025+290+3000)}</b></div>`;
+}
+
+/* ============ Brokers (staff) ============ */
+function vBrokerages(){
+  const sub=S.apps.filter(a=>a.status==='submitted');
+  return `<div class="row spread"><div><h1>Brokers</h1><div class="muted">Brokerages and brokers who submit cases, with their pipeline and payouts. Payout shares are sample values.</div></div><button class="primary" data-act="add-broker">${ic('plus')}Add broker</button></div>
+  ${BROKERAGES.map(bk=>{const brs=brokersOf(bk.id);const l=sub.filter(a=>user(a.brokerId).brokerage===bk.id);
+   return `<section class="card"><div class="row spread"><div><h2>${esc(bk.name)}</h2><div class="small muted">Licence ${esc(bk.license)} · payout share ${bk.share}% of bank commission</div></div>
+     <div class="row small"><span><b class="num">${l.length}</b> cases</span><span><b class="num">${AED(l.filter(a=>!['disbursed','declined'].includes(a.stage)).reduce((t,a)=>t+a.amount,0))}</b> active</span><span><b class="num">${AED(l.filter(a=>a.stage==='disbursed').reduce((t,a)=>t+a.amount,0))}</b> disbursed</span></div></div>
+     <div class="scroll bordered"><table class="tbl-sm"><thead><tr><th>Broker</th><th>Role</th><th>Contact</th><th class="r">Active cases</th><th class="r">Disbursed</th><th class="r">Leads</th><th class="r">Payouts earned</th></tr></thead><tbody>
+     ${brs.map(u=>{const m=sub.filter(a=>a.brokerId===u.id);return `<tr><td><b style="font-weight:500">${esc(u.name)}</b></td><td>${ROLE[u.role]}</td><td class="small">${esc(u.mobile)}<br><span class="muted">${esc(u.email)}</span></td><td class="r">${m.filter(a=>!['disbursed','declined'].includes(a.stage)).length}</td><td class="r">${m.filter(a=>a.stage==='disbursed').length}</td><td class="r">${S.leads.filter(x=>x.owner===u.id).length}</td><td class="r num">${fmt(m.filter(a=>['offer','transfer','disbursed'].includes(a.stage)).reduce((t,a)=>t+brokerPay(a),0))}</td></tr>`;}).join('')}
+     </tbody></table></div></section>`;}).join('')}`;
+}
+
+/* ============ Daily updates ============ */
+function dayEvents(dateStr){
+  const d0=new Date(dateStr+'T00:00:00').getTime(), d1=d0+DAY, ev=[], staff=isStaff();
+  visibleApps().forEach(a=>{
+    a.timeline.forEach((t,ti)=>{ if(ti===1&&Math.abs(t.at-a.timeline[0].at)<120000) return; if(t.at>=d0&&t.at<d1) ev.push({at:t.at,a,type:t.stage==='created'?'New application':'Stage change',text:t.stage==='created'?'Application created':t.sub+(t.note?' · '+t.note:'')}); });
+    Object.entries(a.docs).forEach(([k,fs])=>fs.forEach(f=>{ if(f.at>=d0&&f.at<d1) ev.push({at:f.at,a,type:'Document',text:(k.split(':')[1]==='__other'?'Other file':k.split(':')[1])+' received'}); }));
+    a.messages.forEach(m=>{ if(m.at>=d0&&m.at<d1&&m.from!=='sys'&&(staff||m.channel!=='internal')) ev.push({at:m.at,a,type:'Message',text:m.name+': '+(m.text.length>90?m.text.slice(0,90)+'…':m.text)}); });
+  });
+  return ev.sort((x,y)=>x.at-y.at);
+}
+function vDaily(){
+  const day=ui.day||new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+  ui.day=day;
+  const ev=dayEvents(day), staff=isStaff();
+  const cnt=t=>ev.filter(e=>e.type===t).length;
+  const disb=ev.filter(e=>e.type==='Stage change'&&e.a.stage==='disbursed'&&e.text.startsWith('Disbursed'));
+  const typeC={'New application':'var(--blue)','Stage change':'var(--teal)','Document':'var(--indigo)','Message':'var(--grey)'};
+  return `<div class="row spread"><div><h1>Daily updates</h1><div class="muted">Everything that happened on your cases in one day. Replaces the manual daily update sheet.</div></div>
+   <div class="row"><input type="date" id="dayPick" value="${day}" style="width:auto" aria-label="Day"><button data-act="daily-text">Copy as message</button><button data-act="daily-csv">${ic('download')}Copy CSV</button></div></div>
+  <div class="kpis"><div class="kpi"><span class="label">New applications</span><span class="v">${cnt('New application')}</span></div><div class="kpi"><span class="label">Stage changes</span><span class="v">${cnt('Stage change')}</span></div><div class="kpi"><span class="label">Documents received</span><span class="v">${cnt('Document')}</span></div><div class="kpi"><span class="label">Messages</span><span class="v">${cnt('Message')}</span></div></div>
+  <div class="card flush"><div class="scroll"><table><thead><tr><th>Time</th><th>Client</th><th>Bank</th>${staff||me().role==='manager'?'<th>Broker</th>':''}<th>Update</th><th>Current status</th></tr></thead><tbody>
+  ${ev.map(e=>`<tr class="link" data-href="#app-${e.a.id}" tabindex="0"><td class="nowrap num">${new Date(e.at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}).toLowerCase()}</td><td><b style="font-weight:500">${esc(client(e.a.clientId).name)}</b></td><td>${bankLogo(e.a.bankId)}</td>${staff||me().role==='manager'?`<td class="nowrap">${esc(user(e.a.brokerId).name)}</td>`:''}<td><span class="pill" style="--c:${typeC[e.type]}">${e.type}</span><div class="small" style="margin-top:3px">${esc(e.text)}</div></td><td>${statusCell(e.a)}</td></tr>`).join('')||`<tr><td colspan="6"><div class="empty"><span>No updates on ${dstr(new Date(day+'T12:00:00').getTime())}.</span><span class="small">Pick another day, or move a case to a new stage to see it here.</span></div></td></tr>`}
+  </tbody></table></div></div>`;
+}
+function dailyText(){
+  const ev=dayEvents(ui.day);const by={};
+  ev.forEach(e=>{const k=client(e.a.clientId).name+' ('+bank(e.a.bankId).short+')';(by[k]=by[k]||[]).push(e);});
+  return `Daily update · ${dstr(new Date(ui.day+'T12:00:00').getTime())}\n\n`+(Object.keys(by).map(k=>{const l=by[k],a=l[0].a;return `${k} · now ${a.sub}${isStaff()?' · broker '+user(a.brokerId).name:''}\n`+l.filter(e=>e.type!=='Message').map(e=>'  - '+e.text).join('\n');}).join('\n\n')||'No updates.');
+}
+
+/* ============ Products & proposals ============ */
+function vProducts(){
+  const f=ui.prodType||'';
+  const list=S.products.filter(p=>!f||p.type===f).sort((a,b)=>a.rate-b.rate);
+  const sel=ui.cmp||[];
+  return `<div class="row spread"><div><h1>Bank products</h1><div class="muted">Sample rates for the prototype. Your team keeps these current.</div></div>
+   <div class="row"><select class="filter" data-f="prodType" aria-label="Type"><option value="">All types</option><option${f==='Conventional'?' selected':''}>Conventional</option><option${f==='Islamic'?' selected':''}>Islamic</option></select>
+   <button class="primary" data-act="to-proposal" ${sel.length?'':'disabled'}>Create proposal (${sel.length})</button></div></div>
+  <div class="card flush"><div class="scroll"><table><thead><tr><th></th><th>Bank</th><th>Product</th><th>Type</th><th class="r">Rate</th><th>Fixed period</th><th class="r">Max LTV</th><th class="r">Min salary</th><th>Fees</th><th>Salary transfer</th></tr></thead><tbody>
+  ${list.map(p=>`<tr><td><input type="checkbox" data-act="cmp" data-id="${p.id}" ${sel.includes(p.id)?'checked':''} style="width:auto" aria-label="Compare ${esc(p.name)}"></td><td>${bankLogo(p.bankId)}</td><td>${esc(p.name)}</td><td>${p.type}</td><td class="r num"><b>${p.rate.toFixed(2)}%</b></td><td>${p.fixed?p.fixed+' years':'Variable'}</td><td class="r">${p.ltv}%</td><td class="r num">${fmt(p.minSalary)}</td><td>${esc(p.fee)}</td><td>${p.stl}</td></tr>`).join('')}
+  </tbody></table></div></div>`;
+}
+function vProposals(){
+  const sel=(ui.cmp||[]).map(id=>S.products.find(p=>p.id===id)).filter(Boolean);
+  const amt=ui.pAmt||1000000, ten=ui.pTen||300;
+  return `<div class="row spread"><div><h1>Proposals</h1><div class="muted">Compare products side by side and send the comparison to the client.</div></div><a class="btn" href="#products">${ic('plus')}Pick products</a></div>
+  <section class="card"><h2>Proposal builder</h2>
+   ${sel.length?`<div class="grid-form"><label class="field"><span>Client</span><select id="pr-client">${S.clients.filter(c=>isStaff()||visibleApps().some(a=>a.clientId===c.id)).map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>
+     <label class="field"><span>Loan amount (AED)</span><input id="pr-amt" type="number" value="${amt}"></label><label class="field"><span>Tenure (months)</span><input id="pr-ten" type="number" value="${ten}"></label></div>
+     <div class="scroll bordered"><table class="tbl-sm"><thead><tr><th>Bank</th><th>Product</th><th class="r">Rate</th><th class="r">Monthly payment</th><th class="r">Total interest (fixed period)</th><th>Fees</th></tr></thead><tbody id="pr-body"></tbody></table></div>
+     <div class="row"><button class="primary" data-act="save-proposal">Save proposal</button><button data-act="copy-proposal">Copy for WhatsApp</button></div>`
+   :`<p class="muted" style="margin:0">Select products on the Bank products page, then come back here to compare them.</p>`}
+  </section>
+  <section class="card"><h2>Saved proposals</h2><div class="list">${S.proposals.filter(p=>canSeeOwner(p.by)).slice().reverse().map(p=>`<div class="li"><div><b style="font-weight:500">${esc(client(p.clientId).name)}</b> · ${AED(p.amount)} over ${p.tenure/12} years<div class="small muted">${p.products.length} products · ${rel(p.at)}</div></div></div>`).join('')||'<p class="muted" style="margin:0">No proposals saved yet.</p>'}</div></section>`;
+}
+function prRows(){
+  if(!$('#pr-body')) return;
+  const amt=+$('#pr-amt').value||0, ten=+$('#pr-ten').value||300;
+  ui.pAmt=amt; ui.pTen=ten;
+  $('#pr-body').innerHTML=(ui.cmp||[]).map(id=>S.products.find(p=>p.id===id)).filter(Boolean).map(p=>{const m=emi(amt,p.rate,ten);let bal=amt,int=0;const n=(p.fixed||1)*12,r=p.rate/1200;for(let i=0;i<n;i++){const it=bal*r;int+=it;bal-=m-it;}
+    return `<tr><td>${bankLogo(p.bankId)}</td><td>${esc(p.name)}</td><td class="r num">${p.rate.toFixed(2)}%</td><td class="r num"><b>${fmt(m)}</b></td><td class="r num">${fmt(int)}</td><td>${esc(p.fee)}</td></tr>`;}).join('');
+}
+
+/* ============ Bank documents / Knowledge ============ */
+function vBankDocs(){
+  return `<div><h1>Bank documents</h1><div class="muted">Each bank's forms and policy files in one place. In the full CRM your team uploads and versions these.</div></div>
+  <div class="two">${BANKS.map(b=>`<section class="card"><div class="row spread">${bankLogo(b.id,true)}<span class="small muted">Sample list</span></div><div class="list">${['Mortgage application form','Key facts statement template','Salary transfer letter format','Self-employed CTO worksheet','Approved developers list'].map(d=>`<div class="li"><span class="row" style="gap:8px">${ic('file','style="width:16px;height:16px;color:var(--muted)"')}${esc(b.short)} - ${d}.pdf</span><span class="small muted">PDF</span></div>`).join('')}</div></section>`).join('')}</div>`;
+}
+function vKnowledge(){
+  const arts=[['UAE mortgage process, step by step','From pre-approval to DLD transfer: what happens at each stage and typical timelines.'],['Document checklist by employment type','What salaried, self-employed and non-resident clients need to provide.'],['LTV and DBR rules','Loan-to-value caps and the 50% debt burden ratio limit. Check against the current Central Bank rules.'],['How banks assess self-employed income','CTO, ADB, and why the same client can qualify at one bank and not another.'],['Off-plan and handover cases','Which banks finance off-plan, payment plans and handover requirements.'],['Buyouts and equity release','Moving a mortgage to a new bank: early settlement fees and liability letters.']];
+  return `<div><h1>Knowledge hub</h1><div class="muted">Guides for advisors and partners. Outline only in this prototype.</div></div>
+  <div class="two">${arts.map(([t,d])=>`<section class="card"><h3>${esc(t)}</h3><p class="muted" style="margin:0">${esc(d)}</p></section>`).join('')}</div>`;
+}
+
+/* ============ Calculators ============ */
+function vCalc(){
+  after.push(calcUpdate);
+  return `<div class="row spread"><div><h1>Calculators</h1><div class="muted">Eligibility, monthly payment and upfront costs. Self-employed clients use the CTO / ADB calculator.</div></div><a class="btn primary" href="#cto">${ic('bolt')}CTO / ADB calculator</a></div>
+  <div class="detail-grid">
+   <section class="card"><h2>Eligibility &amp; payment</h2><div class="grid-form" id="calcForm">
+     <label class="field"><span>Residency</span><select id="k-res"><option value="exp">UAE Resident (expat)</option><option value="nat">UAE National</option><option value="nr">Non-resident</option></select></label>
+     <label class="field"><span>Property</span><select id="k-first"><option value="1">First property</option><option value="2">Second or more</option></select></label>
+     <label class="field"><span>Completion</span><select id="k-ready"><option value="ready">Ready</option><option value="offplan">Off-plan</option></select></label>
+     <label class="field"><span>Property price (AED)</span><input id="k-price" type="number" value="1500000"></label>
+     <label class="field"><span>Monthly income (AED)</span><input id="k-inc" type="number" value="35000"></label>
+     <label class="field"><span>Existing EMIs (AED)</span><input id="k-emi" type="number" value="2000"></label>
+     <label class="field"><span>Credit card limits (AED)</span><input id="k-cards" type="number" value="40000"></label>
+     <label class="field"><span>Rate (%)</span><input id="k-rate" type="number" step="0.01" value="4.25"></label>
+     <label class="field"><span>Tenure (years)</span><input id="k-ten" type="number" value="25" min="1" max="25"></label>
+   </div></section>
+   <section class="card"><h2>Result</h2><div id="calcOut" class="kv"></div>
+     <p class="small muted" style="margin:0">LTV caps and costs are typical values for the prototype. Check them against current Central Bank rules and bank fees before advising clients.</p></section>
+  </div>`;
+}
+function calcUpdate(){
+  if(!$('#calcOut')) return;
+  const v=id=>+$(id).value||0, res=$('#k-res').value, first=$('#k-first').value==='1', off=$('#k-ready').value==='offplan';
+  const price=v('#k-price'), inc=v('#k-inc'), liab=v('#k-emi')+v('#k-cards')*0.05, rate=v('#k-rate'), n=Math.min(25,v('#k-ten')||25)*12;
+  let ltv; if(off) ltv=50; else if(res==='nat') ltv=first?(price<=5e6?85:75):65; else if(res==='nr') ltv=first?(price<=5e6?75:65):60; else ltv=first?(price<=5e6?80:70):60;
+  const maxByLtv=price*ltv/100, maxEmi=inc*0.5-liab, maxByDbr=loanFromEmi(maxEmi,rate,n), loan=Math.max(0,Math.min(maxByLtv,maxByDbr));
+  const costs=price*0.04+580+loan*0.0025+290+3000+price*0.02;
+  $('#calcOut').innerHTML=`<div><span>Max LTV</span><b>${ltv}%</b></div><div><span>Max loan by LTV</span><b class="num">${AED(maxByLtv)}</b></div>
+   <div><span>Max monthly payment (50% DBR)</span><b class="num">${AED(Math.max(0,maxEmi))}</b></div><div><span>Max loan by DBR</span><b class="num">${AED(maxByDbr)}</b></div>
+   <div><span>Eligible loan</span><b class="num" style="font-size:18px">${AED(loan)}</b></div><div><span>Monthly payment</span><b class="num" style="font-size:18px">${AED(emi(loan,rate,n))}</b></div>
+   <div><span>Down payment</span><b class="num">${AED(price-loan)}</b></div><div><span>Upfront costs (est.)</span><b class="num">${AED(costs)}</b></div>
+   <div><span>Cash needed</span><b class="num">${AED(price-loan+costs)}</b></div><div><span>Costs include</span><b class="small">DLD 4% + fee, mortgage registration 0.25% + fee, valuation, agency 2%</b></div>`;
+}
+
+/* ============ Commissions / Reports ============ */
+function vComm(){
+  const staff=isStaff();
+  const l=visibleApps().filter(a=>a.status==='submitted'&&['offer','transfer','disbursed'].includes(a.stage)).sort((a,b)=>b.updated-a.updated);
+  const sum=f=>l.reduce((t,a)=>t+f(a),0), sumR=f=>l.filter(a=>a.commission.received).reduce((t,a)=>t+f(a),0);
+  const status=a=>a.commission.received?`<span class="pill" style="--c:var(--green)">${staff?'Received':'Paid out'}</span>`:a.stage==='disbursed'?(staff?`<button data-act="comm-paid" data-id="${a.id}" style="padding:4px 9px;font-size:12px">Mark received</button>`:`<span class="pill" style="--c:var(--amber)">Awaiting bank payout</span>`):`<span class="pill" style="--c:var(--grey)">Awaiting disbursal</span>`;
+  if(!staff) return `<div><h1>My payouts</h1><div class="muted">Your share of the bank commission on cases from the offer stage onwards. ${esc(brokerage(me().brokerage).name)} receives ${brokerage(me().brokerage).share}% of the commission (sample rate).</div></div>
+  <div class="kpis"><div class="kpi"><span class="label">Expected</span><span class="v">${AED(sum(brokerPay))}</span></div><div class="kpi"><span class="label">Paid out</span><span class="v">${AED(sumR(brokerPay))}</span></div><div class="kpi"><span class="label">Outstanding</span><span class="v">${AED(sum(brokerPay)-sumR(brokerPay))}</span></div></div>
+  <div class="card flush"><div class="scroll"><table><thead><tr><th>Client</th><th>Bank</th>${me().role==='manager'?'<th>Broker</th>':''}<th class="r">Loan</th><th class="r">Payout</th><th>Status</th></tr></thead><tbody>
+  ${l.map(a=>`<tr class="link" data-href="#app-${a.id}"><td>${esc(client(a.clientId).name)}</td><td>${bankLogo(a.bankId)}</td>${me().role==='manager'?`<td>${esc(user(a.brokerId).name)}</td>`:''}<td class="r num">${fmt(a.amount)}</td><td class="r num"><b>${fmt(brokerPay(a))}</b></td><td>${status(a)}</td></tr>`).join('')||'<tr><td colspan="6" class="muted">No cases at offer stage yet.</td></tr>'}
+  </tbody></table></div></div>`;
+  return `<div><h1>Commissions</h1><div class="muted">Bank commission and broker payouts from the offer stage onwards. Commission rates and payout shares are sample values.</div></div>
+  <div class="kpis"><div class="kpi"><span class="label">Bank commission expected</span><span class="v">${AED(sum(commOf))}</span></div><div class="kpi"><span class="label">Broker payouts</span><span class="v">${AED(sum(brokerPay))}</span></div><div class="kpi"><span class="label">Net to ${esc(BRAND)}</span><span class="v">${AED(sum(commOf)-sum(brokerPay))}</span></div><div class="kpi"><span class="label">Received from banks</span><span class="v">${AED(sumR(commOf))}</span></div></div>
+  <div class="card flush"><div class="scroll"><table><thead><tr><th>Client</th><th>Bank</th><th>Broker</th><th class="r">Loan</th><th class="r">Rate</th><th class="r">Bank commission</th><th class="r">Broker share</th><th class="r">Broker payout</th><th class="r">Net</th><th>Status</th></tr></thead><tbody>
+  ${l.map(a=>{const bk=brokerage(user(a.brokerId).brokerage);return `<tr class="link" data-href="#app-${a.id}"><td>${esc(client(a.clientId).name)}</td><td>${bankLogo(a.bankId)}</td><td class="nowrap">${esc(user(a.brokerId).name)}<div class="small muted">${esc(bk.name)}</div></td><td class="r num">${fmt(a.amount)}</td><td class="r">${bank(a.bankId).comm}%</td><td class="r num">${fmt(commOf(a))}</td><td class="r">${bk.share}%</td><td class="r num">${fmt(brokerPay(a))}</td><td class="r num"><b>${fmt(commOf(a)-brokerPay(a))}</b></td><td>${status(a)}</td></tr>`;}).join('')}
+  </tbody></table></div></div>`;
+}
+function vReports(){
+  const sub=S.apps.filter(a=>a.status==='submitted');
+  const funnel=STAGES.map(s=>({s,n:s.id==='preapproval'?sub.length:sub.filter(a=>STAGES.findIndex(x=>x.id===a.stage)>=STAGES.findIndex(x=>x.id===s.id)).length}));
+  const max=Math.max(1,funnel[0].n);
+  const byMa=ADVISORS.map(m=>{const l=sub.filter(a=>a.advisor===m);return {m,n:l.length,v:l.reduce((t,a)=>t+a.amount,0),d:l.filter(a=>a.stage==='disbursed').length,dv:l.filter(a=>a.stage==='disbursed').reduce((t,a)=>t+a.amount,0)};});
+  const byBr=brokersOf().map(u=>{const l=sub.filter(a=>a.brokerId===u.id);return {u,n:l.length,v:l.reduce((t,a)=>t+a.amount,0),d:l.filter(a=>a.stage==='disbursed').length,dec:l.filter(a=>a.stage==='declined').length};}).sort((a,b)=>b.v-a.v);
+  const bySrc=SOURCES.map(s=>{const l=S.leads.filter(x=>x.source===s);return {s,n:l.length,c:l.filter(x=>x.stage==='Converted').length};}).filter(x=>x.n);
+  const byBank=BANKS.map(b=>{const l=sub.filter(a=>a.bankId===b.id);const dec=l.filter(a=>a.stage==='declined').length;return {b,n:l.length,dec};}).filter(x=>x.n);
+  return `<div><h1>Reports</h1><div class="muted">Based on demo data.</div></div>
+  <div class="two">
+   <section class="card"><h2>Stage funnel</h2><div class="bars">${funnel.map(x=>`<div class="barrow"><span>${x.s.label}</span><div class="track"><div class="fill" style="width:${x.n/max*100}%;--c:${x.s.c}"></div></div><span class="num small" style="text-align:right">${x.n} (${Math.round(x.n/max*100)}%)</span></div>`).join('')}</div></section>
+   <section class="card"><h2>Broker performance</h2><div class="scroll"><table class="tbl-sm"><thead><tr><th>Broker</th><th class="r">Cases</th><th class="r">Pipeline</th><th class="r">Disbursed</th><th class="r">Declined</th></tr></thead><tbody>${byBr.map(x=>`<tr><td>${esc(x.u.name)}<div class="small muted">${esc(brokerage(x.u.brokerage).name)}</div></td><td class="r">${x.n}</td><td class="r num">${fmt(x.v)}</td><td class="r">${x.d}</td><td class="r">${x.dec}</td></tr>`).join('')}</tbody></table></div></section>
+  </div>
+  <div class="two">
+   <section class="card"><h2>Advisor workload</h2><div class="scroll"><table class="tbl-sm"><thead><tr><th>Advisor</th><th class="r">Cases</th><th class="r">Pipeline</th><th class="r">Disbursed</th><th class="r">Disbursed value</th></tr></thead><tbody>${byMa.map(x=>`<tr><td>${x.m}</td><td class="r">${x.n}</td><td class="r num">${fmt(x.v)}</td><td class="r">${x.d}</td><td class="r num">${fmt(x.dv)}</td></tr>`).join('')}</tbody></table></div></section>
+   <section class="card"><h2>Banks</h2><div class="scroll"><table class="tbl-sm"><thead><tr><th>Bank</th><th class="r">Cases</th><th class="r">Declined</th><th class="r">Approval rate</th></tr></thead><tbody>${byBank.map(x=>`<tr><td>${x.b.short}</td><td class="r">${x.n}</td><td class="r">${x.dec}</td><td class="r">${Math.round((x.n-x.dec)/x.n*100)}%</td></tr>`).join('')}</tbody></table></div></section>
+  </div>
+  <section class="card"><h2>Lead sources</h2><div class="scroll"><table class="tbl-sm"><thead><tr><th>Source</th><th class="r">Leads</th><th class="r">Converted</th><th class="r">Rate</th></tr></thead><tbody>${bySrc.map(x=>`<tr><td>${x.s}</td><td class="r">${x.n}</td><td class="r">${x.c}</td><td class="r">${Math.round(x.c/x.n*100)}%</td></tr>`).join('')}</tbody></table></div></section>`;
+}
+
+
+/* ============ CTO / ADB module ============ */
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const mLabel=k=>{const [y,m]=k.split('-');return MONTHS[+m-1]+' '+y;};
+function sampleMonths(){
+  const r=rng(11),out=[],now=new Date();
+  for(let i=12;i>=1;i--){
+    const d=new Date(Date.UTC(now.getFullYear(),now.getMonth()-i,1));
+    const key=d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');
+    out.push({key,total:Math.round(200000+r()*50000),own:Math.round(15000+r()*15000),loan:i===8?100000:0,returns:r()<0.25?Math.round(2000+r()*6000):0,cash:Math.round(10000+r()*10000),adbDaily:Math.round(60000+r()*30000),adbFixed:Math.round(58000+r()*30000),adbEnd:Math.round(50000+r()*50000),rc:i===5?1:0});
+    if(i===8) out[out.length-1].total+=100000;
+  }
+  return out;
+}
+function sampleTxns(){
+  const r=rng(7),out=[];let bal=70000;const now=new Date();
+  const custs=['GULF STAR GEN TRADING','MARINA FOODS LLC','BLUE OASIS CONTRACTING','AL REEM SUPPLIES','DESERT LINE LOGISTICS','PEARL HOSPITALITY'];
+  const push=(date,desc,credit,debit)=>{if(debit&&bal-debit<10000)return;bal=+(bal+credit-debit).toFixed(2);out.push({date,desc,credit:+credit.toFixed(2),debit:+debit.toFixed(2),balance:bal});};
+  const start=Date.UTC(now.getFullYear(),now.getMonth()-12,1), end=Date.UTC(now.getFullYear(),now.getMonth(),0);
+  const loanDay=new Date(Date.UTC(now.getFullYear(),now.getMonth()-8,10)).toISOString().slice(0,10);
+  const rcDay=new Date(Date.UTC(now.getFullYear(),now.getMonth()-5,15)).toISOString().slice(0,10);
+  const refDay=new Date(Date.UTC(now.getFullYear(),now.getMonth()-7,22)).toISOString().slice(0,10);
+  for(let t=start;t<=end;t+=DAY){
+    const d=new Date(t),ds=d.toISOString().slice(0,10),dom=d.getUTCDate(),dow=d.getUTCDay();
+    const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();
+    if(dom===3||dom===17) push(ds,'CASH DEPOSIT CDM 0441',5000+r()*4000,0);
+    if(dom===12) push(ds,'TRANSFER FROM OWN ACC ****0192',12000+r()*10000,0);
+    if(ds===loanDay) push(ds,'FINANCE DISBURSAL - WORKING CAPITAL',100000,0);
+    if(ds===refDay) push(ds,'REFUND - POS REVERSAL',3200,0);
+    if(ds===rcDay) push(ds,'CHQ RETURN CHARGES CHQ 000214',0,52.5);
+    if(dow!==0&&dow!==6){const n=r()<0.55?1:(r()<0.3?2:0);for(let k=0;k<n;k++) push(ds,'INWARD TT - '+custs[Math.floor(r()*custs.length)],4000+r()*10000,0);
+      if(r()<0.82) push(ds,'OUTWARD TT - SUPPLIER PAYMENT',0,4000+r()*9000);}
+    if(dom===28) push(ds,'WPS SALARY TRANSFER',0,30000);
+    if(dom===last&&(d.getUTCMonth()===0||d.getUTCMonth()===6)) push(ds,'OFFICE RENT CHQ',0,25000);
+  }
+  return out;
+}
+function classify(t){const d=t.desc.toUpperCase();if(t.credit<=0)return null;if(/OWN ACC|OWN ACCOUNT|SELF TRANSFER|TRF FROM OWN/.test(d))return'own';if(/LOAN|FINANCE DISB|DISBURS/.test(d))return'loan';if(/REVERSAL|REFUND|RETURN/.test(d))return'returns';if(/CASH DEP|CDM|CASH DEPOSIT/.test(d))return'cash';return'business';}
+const isRC=t=>t.debit>0&&/(CHQ|CHEQUE).*RETURN|RETURN.*(CHQ|CHEQUE)|BOUNCE/i.test(t.desc);
+const CAT={business:'Business income',own:'Own-account transfer',loan:'Loan / finance',returns:'Refund / reversal',cash:'Cash deposit'};
+function prepTxns(l){l.forEach(t=>{t.cat=classify(t);t.rc=isRC(t);});const biz=l.filter(t=>t.cat==='business').map(t=>t.credit).sort((a,b)=>a-b);const med=biz.length?biz[Math.floor(biz.length/2)]:0;l.forEach(t=>{t.flag=t.credit>0&&med>0&&t.credit>3*med;});return l;}
+function fixedAvg(arr,dates){const pts=String(dates).split(',').map(s=>s.trim().toLowerCase()).filter(Boolean).map(s=>s==='end'?arr.length:Math.min(arr.length,Math.max(1,parseInt(s,10)||1)));return pts.length?pts.reduce((a,p)=>a+arr[p-1],0)/pts.length:mean(arr);}
+function monthsFromTxns(list){
+  if(!list.length) return {months:[],daily:{}};
+  const sorted=list.slice().sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0),first=sorted[0];
+  let bal=first.balance-first.credit+first.debit;const eod={};sorted.forEach(t=>eod[t.date]=t.balance);
+  const start=new Date(first.date.slice(0,7)+'-01T00:00:00Z'),lastD=new Date(sorted[sorted.length-1].date+'T00:00:00Z'),end=new Date(Date.UTC(lastD.getUTCFullYear(),lastD.getUTCMonth()+1,0));
+  const daily={},months={};
+  for(let t=start.getTime();t<=end.getTime();t+=DAY){const ds=new Date(t).toISOString().slice(0,10),k=ds.slice(0,7);if(eod[ds]!==undefined)bal=eod[ds];(daily[k]=daily[k]||[]).push(bal);}
+  sorted.forEach(t=>{const k=t.date.slice(0,7),m=months[k]=months[k]||{key:k,total:0,own:0,loan:0,returns:0,cash:0,rc:0};if(t.credit>0){m.total+=t.credit;if(t.cat!=='business')m[t.cat]+=t.credit;}if(t.rc)m.rc++;});
+  return {daily,months:Object.keys(daily).sort().map(k=>{const m=months[k]||{key:k,total:0,own:0,loan:0,returns:0,cash:0,rc:0},a=daily[k];m.adbDaily=mean(a);m.adbFixed=fixedAvg(a,'5,10,15,20,25,end');m.adbEnd=a[a.length-1];return m;})};
+}
+let CT=null;
+function ctoInit(appId){
+  if(CT&&CT.appId===appId) return;
+  const a=appId?appById(appId):null, c=a?client(a.clientId):null;
+  CT={appId,tab:'monthly',open:null,txFilter:'excluded',source:'manual',txns:[],daily:{},months:a&&a.cto&&a.cto.monthsData?a.cto.monthsData:sampleMonths(),
+      p:{share:100,emis:c?c.emis:6500,cards:c?c.cards:60000,loan:a?a.amount:2000000,tenure:a?Math.round(a.tenure/12):25}};
+}
+function ctoCalc(b){
+  const p=CT.p,all=CT.months,res={rule:b,bankId:b.id,reasons:[]};
+  if(all.length<b.months){res.status='no';res.reasons.push(`Needs ${b.months} months of statements (${all.length} loaded)`);return res;}
+  const use=all.slice(-b.months);
+  res.period=mLabel(use[0].key)+' – '+mLabel(use[use.length-1].key);
+  res.avgTotal=mean(use.map(m=>m.total));res.avgExcl=mean(use.map(m=>m.own+m.loan+m.returns+m.cash*(1-b.cash/100)));
+  res.cto=mean(use.map(m=>m.total-m.own-m.loan-m.returns-m.cash*(1-b.cash/100)));
+  res.adb=b.adb==='daily'?mean(use.map(m=>m.adbDaily)):b.adb==='monthEnd'?mean(use.map(m=>m.adbEnd)):(CT.source==='statement'?mean(use.map(m=>fixedAvg(CT.daily[m.key],b.dates))):mean(use.map(m=>m.adbFixed)));
+  res.rc=use.reduce((a,m)=>a+(+m.rc||0),0);
+  res.incCto=res.cto*b.ctoPct/100;res.incAdb=res.adb*b.adbPct/100;
+  res.gross=b.basis==='cto'?res.incCto:b.basis==='adb'?res.incAdb:b.basis==='min'?Math.min(res.incCto,res.incAdb):Math.max(res.incCto,res.incAdb);
+  res.income=res.gross*p.share/100;res.liab=p.emis+p.cards*0.05;res.maxEmi=res.income*b.dbr/100-res.liab;res.years=Math.min(p.tenure,b.tenure);
+  res.maxLoan=loanFromEmi(res.maxEmi,b.rate,res.years*12);
+  if(res.cto<b.minCto)res.reasons.push(`Avg CTO below bank minimum of ${fmt(b.minCto)}`);
+  if(res.adb<b.minAdb)res.reasons.push(`ADB below bank minimum of ${fmt(b.minAdb)}`);
+  if(res.rc>b.maxRc)res.reasons.push(`${res.rc} returned cheques (max ${b.maxRc})`);
+  if(res.maxEmi<=0)res.reasons.push('Existing liabilities use up the DBR limit');
+  if(res.reasons.length)res.status='no';else if(p.loan>0&&res.maxLoan<p.loan){res.status='chk';res.reasons.push(`Short of requested loan by ${fmt(p.loan-res.maxLoan)}`);}else res.status='ok';
+  return res;
+}
+const ctoPill=s=>({ok:'<span class="pill" style="--c:var(--green)">Eligible</span>',chk:'<span class="pill" style="--c:var(--amber)">Check amount</span>',no:'<span class="pill" style="--c:var(--red)">Not eligible</span>'}[s]);
+const ADBL={daily:'Daily average',fixed:'Fixed dates',monthEnd:'Month-end'},BASL={cto:'CTO only',adb:'ADB only',min:'Lower of CTO / ADB',max:'Higher of CTO / ADB'};
+let ctoLast=[];
+function vCto(appId){
+  const a=appId&&appById(appId); ctoInit(a?appId:null);
+  const c=a?client(a.clientId):null;
+  after.push(()=>{ctoResults();ctoData();});
+  return `
+  ${a?`<div class="crumbs"><a href="#applications">Applications</a><span>›</span><a href="#app-${a.id}">${esc(c.name)} - ${esc(bank(a.bankId).short)}</a><span>›</span><b>CTO / ADB</b></div>`:''}
+  <div class="row spread"><div><h1>CTO &amp; ADB calculator</h1><div class="muted">Self-employed income from bank statements, calculated with each bank's own rules.</div></div>
+   <div class="row"><button data-act="cto-copy">Copy summary</button>${a?`<button class="primary" data-act="cto-save">Save to application</button>`:`<select class="filter" id="ctoAttach" aria-label="Attach to application"><option value="">Attach to application…</option>${visibleApps().filter(x=>client(x.clientId).employment==='Self-employed').map(x=>`<option value="${x.id}">${esc(client(x.clientId).name)} - ${bank(x.bankId).short}</option>`).join('')}</select>`}</div></div>
+  <section class="card"><div class="row spread"><h2>${c?esc(c.name)+(c.company?' · '+esc(c.company):''):'Client & liabilities'}</h2><span class="small muted">${a?'Liabilities and loan prefilled from the application':'Example figures'}</span></div>
+   <div class="grid-form">
+    ${[['share','Ownership share %'],['emis','Existing monthly EMIs (AED)'],['cards','Credit card limits (AED)'],['loan','Loan requested (AED)'],['tenure','Tenure (years)']].map(([k,l])=>`<label class="field"><span>${l}</span><input class="r num" type="number" min="0" data-ctop="${k}" value="${CT.p[k]}"></label>`).join('')}
+   </div></section>
+  <section class="card"><div class="row spread"><h2>Bank comparison</h2><span class="small muted">Select a bank to see how it was calculated</span></div>
+   <div class="ctokpis" id="ctoKpis"></div><div class="scroll bordered"><table class="tbl-sm" id="ctoRes"></table></div>
+   <p class="small muted" style="margin:0">Liabilities = existing EMIs + 5% of credit card limits. Max loan uses each bank's DBR cap, rate and maximum tenure. It doesn't apply LTV limits.</p></section>
+  <section class="card"><div class="tabs" role="tablist">${[['monthly','Monthly figures'],['txns','Statement transactions'],['rules','Bank rules']].map(([k,l])=>`<button role="tab" data-act="cto-tab" data-v="${k}" aria-selected="${CT.tab===k}">${l}</button>`).join('')}</div><div id="ctoData" style="display:grid;gap:12px"></div></section>`;
+}
+function ctoResults(){
+  if(!$('#ctoRes')) return;
+  const res=S.rules.map(ctoCalc),ord={ok:0,chk:1,no:2};
+  res.sort((a,b)=>ord[a.status]-ord[b.status]||(b.maxLoan||0)-(a.maxLoan||0)); ctoLast=res;
+  const m=CT.months,m12=m.slice(-12),el=res.filter(r=>r.status!=='no'),best=el[0];
+  $('#ctoKpis').innerHTML=[['Statements',m.length+' months',m.length?mLabel(m[0].key)+' – '+mLabel(m[m.length-1].key):'None'],['Avg CTO, all exclusions',fmt(mean(m12.map(x=>x.total-x.own-x.loan-x.returns-x.cash))),'AED / month'],['Daily ADB',fmt(mean(m12.map(x=>x.adbDaily))),'AED'],['Banks that qualify',res.filter(r=>r.status==='ok').length+' of '+res.length,el.length-res.filter(r=>r.status==='ok').length+' more at a lower amount'],['Highest max loan',best?fmt(best.maxLoan):'—',best?bank(best.bankId).short:'No bank qualifies']]
+    .map(([l,v,h])=>`<div><span class="label">${l}</span><b>${v}</b><span class="small muted">${h}</span></div>`).join('');
+  let h=`<thead><tr><th>Bank</th><th class="r">Eligible CTO / mo</th><th class="r">ADB</th><th class="r">Income considered</th><th class="r">Max EMI</th><th class="r">Max loan</th><th>Status</th></tr></thead><tbody>`;
+  res.forEach(r=>{const b=r.rule,open=CT.open===b.id;
+    h+=`<tr class="link" tabindex="0" data-act="cto-open" data-id="${b.id}" aria-expanded="${open}"><td><b style="font-weight:600">${esc(bank(b.id).name)}</b><div class="small muted">${b.months}m · ${ADBL[b.adb]} · ${BASL[b.basis]}</div></td>
+     <td class="r num">${fmt(r.cto)}</td><td class="r num">${fmt(r.adb)}</td><td class="r num">${fmt(r.income)}</td><td class="r num">${r.maxEmi!==undefined?fmt(Math.max(0,r.maxEmi)):'—'}</td><td class="r num"><b>${r.maxLoan?fmt(r.maxLoan):'—'}</b></td>
+     <td>${ctoPill(r.status)}${r.reasons.length?`<div class="reasons">${r.reasons.map(esc).join('<br>')}</div>`:''}</td></tr>`;
+    if(open) h+=`<tr class="detailrow"><td colspan="7">${r.cto===undefined?`<span class="muted">${esc(r.reasons.join('. '))}.</span>`:`<div class="breakdown">${[['Period used',r.period],['Avg total credits / month',fmt(r.avgTotal)],['Less excluded credits','− '+fmt(r.avgExcl)],['Cash deposits counted',b.cash+'%'],['Eligible CTO / month',fmt(r.cto)],['ADB ('+ADBL[b.adb]+(b.adb==='fixed'?': '+b.dates:'')+')',fmt(r.adb)],['Income from CTO ('+b.ctoPct+'%)',fmt(r.incCto)],['Income from ADB ('+b.adbPct+'%)',fmt(r.incAdb)],['Basis: '+BASL[b.basis],fmt(r.gross)],['× Ownership share',CT.p.share+'% = '+fmt(r.income)],['DBR cap '+b.dbr+'%',fmt(r.income*b.dbr/100)],['Less liabilities','− '+fmt(r.liab)],['Max EMI',fmt(Math.max(0,r.maxEmi))],['Rate / tenure',b.rate+'% · '+r.years+' yrs'],['Returned cheques',r.rc+' (max '+b.maxRc+')'],['Max loan',fmt(r.maxLoan)]].map(([k,v])=>`<div><span>${esc(k)}</span><b class="num">${esc(String(v))}</b></div>`).join('')}</div>`}</td></tr>`;
+  });
+  $('#ctoRes').innerHTML=h+'</tbody>';
+}
+const MCOLS=[['total','Total credits'],['own','Own-account transfers'],['loan','Loan / finance credits'],['returns','Refunds / reversals'],['cash','Cash deposits'],['adbDaily','Daily avg balance'],['adbFixed','Fixed-date avg balance'],['adbEnd','Month-end balance'],['rc','Returned cheques']];
+const RCOLS=[['months','Months','sel',[[6,'6'],[12,'12']]],['adb','ADB method','sel',[['daily','Daily average'],['fixed','Fixed dates'],['monthEnd','Month-end']]],['dates','Fixed dates','text'],['cash','Cash counted %','num'],['ctoPct','CTO → income %','num'],['adbPct','ADB → income %','num'],['basis','Income basis','sel',[['cto','CTO only'],['adb','ADB only'],['min','Lower of the two'],['max','Higher of the two']]],['minCto','Min avg CTO','num'],['minAdb','Min ADB','num'],['maxRc','Max returned chq','num'],['rate','Rate %','num'],['tenure','Max tenure (yrs)','num'],['dbr','DBR cap %','num']];
+function ctoData(){
+  const box=$('#ctoData'); if(!box) return;
+  if(CT.tab==='monthly'){
+    const ro=CT.source==='statement';
+    let h=ro?`<div class="notice info">These figures come from the uploaded statement. Re-categorise transactions to change them. <button data-act="cto-manual" style="margin-left:8px">Edit by hand instead</button></div>`
+      :`<div class="row spread"><span class="muted">${CT.appId&&appById(CT.appId).cto?'Saved figures.':'Demo figures. Replace them with the client\'s statement figures, or upload the statement.'}</span><div class="row"><button data-act="cto-addm">Add month</button><button data-act="cto-sample">Reload sample</button><button data-act="cto-clear">Clear</button></div></div>`;
+    h+=`<div class="scroll bordered"><table class="tbl-sm"><thead><tr><th>Month</th>${MCOLS.map(c=>`<th class="r">${c[1]}</th>`).join('')}<th class="r">Eligible CTO*</th>${ro?'':'<th></th>'}</tr></thead><tbody>`;
+    if(!CT.months.length) h+=`<tr><td colspan="12" class="muted">No months yet.</td></tr>`;
+    CT.months.forEach((m,i)=>{h+=`<tr><td>${ro?mLabel(m.key):`<input type="month" data-cm="${i}" data-f="key" value="${m.key}" style="min-width:140px">`}</td>`+MCOLS.map(([f])=>`<td class="r num">${ro?fmt(m[f]):`<input class="r num" type="number" min="0" data-cm="${i}" data-f="${f}" value="${Math.round(m[f])}">`}</td>`).join('')+`<td class="r num"><b>${fmt(m.total-m.own-m.loan-m.returns-m.cash)}</b></td>${ro?'':`<td><button data-act="cto-delm" data-i="${i}">Remove</button></td>`}</tr>`;});
+    box.innerHTML=h+`</tbody></table></div><p class="small muted" style="margin:0">*Excludes every flagged credit, including all cash. Each bank's figure above follows that bank's own cash rule.</p>`;
+  } else if(CT.tab==='txns'){
+    let h=`<div class="row spread"><label class="field" style="min-width:220px"><span>Upload statement (CSV)</span><input type="file" data-act="cto-csv" accept=".csv,text/csv"></label><div class="row"><button data-act="cto-sampletx">Load sample statement</button>${CT.txns.length?'<button data-act="cto-cleartx">Clear statement</button>':''}</div></div>
+      <div class="small muted">Columns needed: date, description, debit, credit, balance. In production, a reader for each bank's PDF statement layout replaces this step.</div>`;
+    if(!CT.txns.length){box.innerHTML=h+`<p class="muted" style="margin:0">No statement loaded.</p>`;return;}
+    let rows=CT.txns.map((t,i)=>({t,i}));
+    if(CT.txFilter==='excluded') rows=rows.filter(({t})=>(t.credit>0&&(t.cat!=='business'||t.flag))||t.rc); else if(CT.txFilter==='credits') rows=rows.filter(({t})=>t.credit>0);
+    h+=`<label class="field" style="max-width:260px"><span>Show</span><select data-act="cto-txf"><option value="excluded"${CT.txFilter==='excluded'?' selected':''}>Excluded and flagged credits</option><option value="credits"${CT.txFilter==='credits'?' selected':''}>All credits</option><option value="all"${CT.txFilter==='all'?' selected':''}>All transactions</option></select></label>
+     <div class="scroll bordered" style="max-height:440px"><table class="tbl-sm"><thead><tr><th>Date</th><th>Description</th><th class="r">Credit</th><th class="r">Debit</th><th class="r">Balance</th><th>Category</th><th></th></tr></thead><tbody>
+     ${rows.map(({t,i})=>`<tr><td>${t.date}</td><td>${esc(t.desc)}</td><td class="r num">${t.credit?fmt(t.credit):''}</td><td class="r num">${t.debit?fmt(t.debit):''}</td><td class="r num">${fmt(t.balance)}</td><td>${t.credit>0?`<select data-act="cto-cat" data-i="${i}">${Object.keys(CAT).map(c=>`<option value="${c}"${t.cat===c?' selected':''}>${CAT[c]}</option>`).join('')}</select>`:(t.rc?'<span class="pill" style="--c:var(--red)">Returned cheque</span>':'')}</td><td>${t.flag?'<span class="small" style="color:var(--amber);font-weight:600">Large one-off, check source</span>':''}</td></tr>`).join('')||'<tr><td colspan="7" class="muted">Nothing to show.</td></tr>'}</tbody></table></div>`;
+    box.innerHTML=h;
+  } else {
+    box.innerHTML=`<div class="notice"><b>Sample values for testing only.</b> They aren't the banks' real policies. Replace each row with the bank's current CTO / ADB policy. Rules are shared across every application in the CRM.${isAdmin()?'':' Only admins can edit them.'}</div>
+     ${isAdmin()?'<div class="row"><button data-act="cto-resetrules">Reset to sample rules</button></div>':''}
+     <div class="scroll bordered"><table class="tbl-sm"><thead><tr><th>Bank</th>${RCOLS.map(c=>`<th>${c[1]}</th>`).join('')}</tr></thead><tbody>
+     ${S.rules.map((b,i)=>`<tr><td><b style="font-weight:600">${esc(bank(b.id).short)}</b></td>${RCOLS.map(([f,,type,opts])=>type==='sel'?`<td><select data-rule="${i}" data-f="${f}" ${isAdmin()?'':'disabled'}>${opts.map(([v,l])=>`<option value="${v}"${String(b[f])===String(v)?' selected':''}>${l}</option>`).join('')}</select></td>`:type==='text'?`<td><input data-rule="${i}" data-f="${f}" value="${esc(b[f])}" ${b.adb!=='fixed'||!isAdmin()?'disabled':''} style="min-width:150px"></td>`:`<td><input class="r num" type="number" step="any" data-rule="${i}" data-f="${f}" value="${b[f]}" ${isAdmin()?'':'disabled'}></td>`).join('')}</tr>`).join('')}
+     </tbody></table></div>`;
+  }
+}
+function ctoRebuild(){const r=monthsFromTxns(CT.txns);CT.months=r.months;CT.daily=r.daily;}
+function ctoSaveTo(appId){
+  const a=appById(appId); if(!a) return;
+  a.cto={at:Date.now(),months:CT.months.length,monthsData:CT.months.map(m=>({...m})),rows:ctoLast.map(r=>({bankId:r.bankId,status:r.status,cto:r.cto||0,adb:r.adb||0,maxLoan:r.maxLoan||0}))};
+  const best=ctoLast.find(r=>r.status!=='no');
+  addTimeline(a,a.stage,a.sub,'CTO / ADB assessment saved');
+  a.timeline.pop(); a.updated=Date.now();
+  a.messages.push({from:'sys',name:'System',channel:'internal',text:`CTO / ADB assessment saved. ${ctoLast.filter(r=>r.status==='ok').length} banks qualify${best?`, highest max loan ${AED(best.maxLoan)} (${bank(best.bankId).short})`:''}.`,at:Date.now(),internal:true});
+  save(); ui.detailTab='cto'; location.hash='#app-'+appId; toast('Assessment saved to application');
+}
+function parseCsv(text){
+  const split=line=>{const o=[];let c='',q=false;for(const ch of line){if(ch==='"'){q=!q;continue;}if(ch===','&&!q){o.push(c);c='';}else c+=ch;}o.push(c);return o.map(s=>s.trim());};
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)return[];
+  const head=split(lines[0]).map(h=>h.toLowerCase()),idx=n=>head.findIndex(h=>n.some(x=>h.includes(x)));
+  const iD=idx(['date']),iT=idx(['desc','narration','details','particular']),iDr=idx(['debit','withdraw']),iCr=idx(['credit','deposit']),iB=idx(['balance']);
+  if([iD,iT,iDr,iCr,iB].some(i=>i<0)) throw new Error('cols');
+  const num=s=>+String(s||'').replace(/[^0-9.\-]/g,'')||0;
+  const dt=s=>{let m;if((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)))return`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;if((m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/))){const y=m[3].length===2?'20'+m[3]:m[3];return`${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;}return null;};
+  return lines.slice(1).map(split).map(c=>({date:dt(c[iD]||''),desc:c[iT]||'',debit:Math.abs(num(c[iDr])),credit:Math.abs(num(c[iCr])),balance:num(c[iB])})).filter(t=>t.date);
+}
+
+/* ============ shared feedback (platform) ============ */
+const P={db:null,user:null,comments:null,uid:null,canWrite:null,canEdit:false,shared:[],names:{},state:'idle'};
+async function platformInit(){
+  const use=n=>(window.claude&&typeof window.claude.use==='function')?Promise.resolve(window.claude.use(n)).catch(()=>null):Promise.resolve(null);
+  const [cm,u,db]=await Promise.all([use('comments'),use('user'),use('db')]);
+  P.comments=cm;P.user=u;P.db=db;
+  if(u){try{P.uid=await u.id();}catch(e){} try{P.canWrite=await u.can('data.write');}catch(e){} try{P.canEdit=!!(await u.canEdit());}catch(e){}}
+  if(db&&P.canEdit){
+    P.state='loading';
+    const timer=setTimeout(()=>{if(P.state==='loading'){P.state='slow';refreshInbox();}},10000);
+    try{db.collection('feedback').onSnapshot(async snap=>{
+      if(!snap.metadata||!snap.metadata.fromCache) clearTimeout(timer);
+      P.state='ready';
+      const list=[];snap.docs.forEach(d=>{const v=d.data()||{};(Array.isArray(v.entries)?v.entries:[]).forEach(e=>{if(e&&typeof e.text==='string')list.push({...e,uid:d.id});});});
+      P.shared=list.sort((a,b)=>(+b.at||0)-(+a.at||0));
+      const ids=[...new Set(list.map(e=>e.uid))];
+      if(u&&ids.length){try{const ps=await u.profiles(ids);ids.forEach(id=>{P.names[id]=(ps&&ps[id]&&ps[id].name)||'';});}catch(e){}}
+      refreshInbox();
+    },()=>{clearTimeout(timer);P.state='error';refreshInbox();});}catch(e){P.state='error';}
+  }
+  refreshInbox();
+}
+function refreshInbox(){const box=document.getElementById('sharedInbox');if(box)box.innerHTML=inboxHtml();}
+function inboxHtml(){
+  if(!P.canEdit) return '';
+  const head=`<div class="row spread"><div><h2>Tester feedback</h2><div class="small muted">From everyone you shared this link with. Only you and editors see this.</div></div>${P.shared.length?'<button data-act="inbox-copy">Copy all</button>':''}</div>`;
+  let body;
+  if(P.state==='loading') body='<p class="muted" style="margin:0">Loading feedback…</p>';
+  else if(P.state==='slow') body='<p class="muted" style="margin:0">Feedback can\'t be reached yet. It will appear when the connection returns.</p>';
+  else if(P.state==='error') body='<p class="muted" style="margin:0">Feedback couldn\'t be loaded on this visit. Reopen the page to try again.</p>';
+  else if(!P.shared.length) body='<p class="muted" style="margin:0">No feedback yet. Share the link and ask testers to use the Feedback tab on the right edge.</p>';
+  else body=`<div class="list">${P.shared.slice(0,50).map(e=>`<div class="li"><div><span class="pill" style="--c:${e.type==='Problem'?'var(--red)':e.type==='Idea'?'var(--teal)':'var(--grey)'}">${esc(e.type)}</span> ${esc(e.text)}<div class="small muted">${esc(P.names[e.uid]||'A tester')} · ${esc(e.persona||'')} · screen: ${esc(e.screen||'')} · ${e.at?rel(+e.at):''}</div></div></div>`).join('')}</div>`;
+  return `<section class="card">${head}${body}</section>`;
+}
+async function sendShared(entry){
+  const btn=document.querySelector('[data-act="fb-send"]');if(btn){btn.disabled=true;btn.textContent='Sending…';}
+  if(FEEDBACK_SHEET_URL){try{await fetch(FEEDBACK_SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(entry)});closeModal();toast('Thanks! Your feedback was sent to the team.');return;}catch(e){}}
+  if(P.db&&P.uid&&P.canWrite!==false){
+    try{const ref=P.db.doc('feedback/'+P.uid);const cur=await ref.get();const d=cur.exists?(cur.data()||{}):{};const old=Array.isArray(d.entries)?d.entries:[];
+      await ref.set({entries:[...old,entry].slice(-200)});
+      closeModal();toast('Thanks! Your feedback was sent to the team.');if(isAdmin()||!me())route();return;}catch(e){}
+  }
+  const txt=`Feedback (${entry.type})${entry.name?' from '+entry.name:''} on the ${entry.screen} screen, signed in as ${entry.persona}:\n${entry.text}`;
+  const num=FEEDBACK_WHATSAPP.replace(/\D/g,'');
+  const wa=num?`<a class="btn primary" href="https://wa.me/${num}?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener" data-act="close">Send on WhatsApp</a>`:'';
+  const cm=P.comments?`<button ${wa?'':'class="primary"'} data-act="fb-copy-comment">Copy and open comment box</button>`:'';
+  const msg=wa?'Tap the button to send your feedback to the team on WhatsApp.':cm?'Your access can\'t save feedback here directly. Copy it, then post it as a comment on this page.':'Copy your feedback and send it to the person who shared this link.';
+  modal(`<h2>${wa?'Send your feedback':'One more step'}</h2><p class="muted" style="margin:0">${msg}</p><textarea id="fbCopy" rows="5" readonly>${esc(txt)}</textarea><div class="row">${wa}${cm}<button ${wa||cm?'':'class="primary"'} data-act="fb-copy">Copy</button><button data-act="close">Close</button></div>`);
+}
+
+/* ============ modal ============ */
+function modal(html){$('#modal').innerHTML=`<div class="modal-bg" data-act="modal-bg"><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`;const f=$('#modal').querySelector('textarea,select,input,button');f&&f.focus();}
+const closeModal=()=>$('#modal').innerHTML='';
+
+const VIEWS={dashboard:vDashboard,leads:vLeads,applications:vApps,products:vProducts,proposals:vProposals,'bank-documents':vBankDocs,calculators:vCalc,cto:()=>vCto(null),commissions:vComm,reports:vReports,knowledge:vKnowledge,profile:vProfile,brokerages:vBrokerages,'daily-updates':vDaily};
+function newAppId(){return Math.random().toString(36).slice(2,8).toUpperCase()+Math.random().toString(36).slice(2,8).toUpperCase();}
+
+/* ============ events ============ */
+document.addEventListener('click',e=>{
+  const row=e.target.closest('tr[data-href]');
+  const el=e.target.closest('[data-act]');
+  if(el&&el.tagName!=='SELECT'&&el.type!=='checkbox'&&el.type!=='file'){
+    const act=el.dataset.act,id=el.dataset.id;
+    switch(act){
+      case 'menu':$('#side').classList.toggle('open');return;
+      case 'login':S.session=id;save();CT=null;Object.assign(ui,{fMa:'',fBroker:'',q:'',onlyToday:false,chan:'broker'});location.hash='#dashboard';route();toast('Signed in as '+user(id).name);return;
+      case 'logout':S.session=null;save();CT=null;location.hash='#login';route();return;
+      case 'reset':modal(`<h2>Reset demo data?</h2><p class="muted" style="margin:0">This replaces everything in this prototype with fresh sample data and signs you out.</p><div class="row"><button class="primary" data-act="reset-yes">Reset</button><button data-act="close">Cancel</button></div>`);return;
+      case 'reset-yes':S=seed();save();CT=null;closeModal();location.hash='#login';route();toast('Demo data reset');return;
+      case 'close':closeModal();return;
+      case 'modal-bg':if(e.target===el)closeModal();return;
+      case 'feedback':modal(`<h2>Send feedback</h2><p class="muted" style="margin:0">Tell the ${esc(BRAND)} team what's not working or what would help. The screen you're on is noted with it.</p><label class="field"><span>Type</span><select id="fbType"><option>Idea</option><option>Problem</option><option>Other</option></select></label><label class="field"><span>Your name (optional)</span><input id="fbName" value="${esc((()=>{try{return localStorage.getItem('mcrm.fbname')||'';}catch(e){return '';}})())}"></label><label class="field"><span>Your feedback</span><textarea id="fbText" rows="4"></textarea></label><div class="row"><button class="primary" data-act="fb-send">Send feedback</button><button data-act="close">Cancel</button></div>`);return;
+      case 'fb-send':{const t=$('#fbText').value.trim();if(!t){toast('Write your feedback first');return;}const u0=me();const entry={id:uid('f'),type:$('#fbType').value,text:t.slice(0,3000),screen:(location.hash||'#dashboard').slice(1)||'dashboard',persona:u0?ROLE[u0.role]+' ('+u0.name+')':'Not signed in',name:($('#fbName')?$('#fbName').value.trim():'').slice(0,80),at:Date.now()};try{localStorage.setItem('mcrm.fbname',entry.name);}catch(e){}if(u0){S.feedback.push({id:entry.id,by:S.session,type:entry.type,text:entry.text,at:entry.at});save();}sendShared(entry);return;}
+      case 'fb-copy':copy($('#fbCopy').value,'Feedback copied');return;
+      case 'fb-copy-comment':{copy($('#fbCopy').value,'Feedback copied');closeModal();const target=$('#view h1')||$('#view');if(P.comments&&P.comments.openComposer){P.comments.openComposer({element:target}).then(r=>{if(!r||!r.opened)toast('Feedback copied. Open the comment tool at the top of the page and paste it.');else toast('Paste your feedback into the comment box');}).catch(()=>toast('Feedback copied. Send it to the person who shared this link.'));}else toast('Feedback copied. Send it to the person who shared this link.');return;}
+      case 'inbox-copy':copy(P.shared.map(e=>`[${e.type}] ${e.text}\n  ${P.names[e.uid]||'A tester'} · ${e.persona} · screen: ${e.screen} · ${new Date(e.at).toLocaleString('en-GB')}`).join('\n\n'),P.shared.length+' feedback items copied');return;
+      case 'quick-lead':ui.leadForm=true;if(location.hash==='#leads'){route();}return;
+      case 'apptab':ui.appTab=el.dataset.v;route();return;
+      case 'today':ui.onlyToday=!ui.onlyToday;route();return;
+      case 'csv':{const l=filteredApps();copy(['Client,Bank,Amount,Stage,Status,Last updated,Advisor,Broker',...l.map(a=>[client(a.clientId).name,bank(a.bankId).short,a.amount,stage(a.stage).label,a.sub,new Date(a.updated).toISOString(),a.advisor,user(a.brokerId).name].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','))].join('\n'),l.length+' rows copied as CSV. Paste into Excel or Sheets.');return;}
+      case 'dup':{e.stopPropagation();const a=appById(id);modal(`<h2>Add another bank</h2><p class="muted" style="margin:0">Creates a draft for ${esc(client(a.clientId).name)} at another bank, with the same client and mortgage details.</p><label class="field"><span>Bank</span><select id="dupBank">${BANKS.filter(b=>b.id!==a.bankId).map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select></label><div class="row"><button class="primary" data-act="dup-yes" data-id="${id}">Create draft</button><button data-act="close">Cancel</button></div>`);return;}
+      case 'dup-yes':{const a=appById(id),nb=$('#dupBank').value,p=S.products.find(x=>x.bankId===nb&&x.fixed===3);const n=JSON.parse(JSON.stringify(a));Object.assign(n,{id:uid('a'),appId:newAppId(),bankId:nb,productId:p?p.id:'',rate:p?p.rate:a.rate,type:['dib','adib','ei'].includes(nb)?'Islamic':'Conventional',status:'draft',stage:'preapproval',sub:'Documents collection',created:Date.now(),updated:Date.now(),unread:0,messages:[],tasks:[],cto:null,timeline:[{stage:'created',sub:'Application created',at:Date.now(),by:me().name,note:'Duplicated from '+bank(a.bankId).short}],commission:{received:null},submittedBy:S.session});
+        Object.keys(n.docs).forEach(k=>{if(k.startsWith('bank:'))delete n.docs[k];});S.apps.push(n);save();closeModal();location.hash='#app-'+n.id;toast('Draft created for '+bank(nb).short);return;}
+      case 'share':copy(location.href.split('#')[0]+'#app-'+id,'Link copied');return;
+      case 'dtab':ui.detailTab=el.dataset.v;route();return;
+      case 'doctab':ui.docTab=el.dataset.v;route();return;
+      case 'chan':ui.chan=el.dataset.v;route();setTimeout(()=>{const m=$('#msgs');if(m)m.scrollTop=m.scrollHeight;},0);return;
+      case 'more':ui.more=!ui.more;route();return;
+      case 'open-doc':e.preventDefault();toast('Prototype: files open from secure storage in the full CRM');return;
+      case 'rm-doc':{const a=appById(id);a.docs[el.dataset.k].splice(+el.dataset.i,1);save();route();toast('File removed');return;}
+      case 'dl-all':toast('Prototype: downloads a ZIP of all documents in the full CRM');return;
+      case 'request-docs':{const a=appById(id),c=client(a.clientId);const miss=[...DOCS[c.employment].filter(d=>!hasDoc(a,'main:'+d)),...DOCS.property.filter(d=>!hasDoc(a,'property:'+d)&&d!=='Valuation report')];
+        copy(`Hi ${c.name.split(' ')[0]}, to move your ${bank(a.bankId).short} mortgage application forward we still need:\n${miss.map(d=>'• '+d).join('\n')}\nYou can send them here or upload them on the secure link. Thank you!`,miss.length+' missing documents copied as a WhatsApp message');return;}
+      case 'add-co':{const a=appById(id);modal(`<h2>Add co-applicant</h2><label class="field"><span>Full name</span><input id="coName"></label><label class="field"><span>Employment</span><select id="coEmp"><option>Salaried</option><option>Self-employed</option></select></label><label class="field"><span>Monthly salary (AED)</span><input id="coSal" type="number" value="0"></label><div class="row"><button class="primary" data-act="co-yes" data-id="${a.clientId}">Add</button><button data-act="close">Cancel</button></div>`);return;}
+      case 'co-yes':{const n=$('#coName').value.trim();if(!n){toast('Enter the co-applicant\'s name');return;}client(id).co={name:n,employment:$('#coEmp').value,salary:+$('#coSal').value||0};save();closeModal();route();return;}
+      case 'submit-draft':{const a=appById(id);a.status='submitted';a.updated=Date.now();a.messages.push({from:'sys',name:'System',channel:'broker',text:'Application submitted to '+BRAND,at:Date.now()});save();route();toast('Application submitted');return;}
+      case 'toggle-lead-form':ui.leadForm=!ui.leadForm;route();return;
+      case 'lead-convert':{const l=S.leads.find(x=>x.id===id);ui.prefillClient=null;ui.prefillName=l.name;ui.prefillMobile=l.mobile;ui.prefillBudget=l.budget;ui.prefillBroker=l.owner;ui.convertLead=l.id;location.hash='#new-application';return;}
+      case 'to-proposal':location.hash='#proposals';return;
+      case 'save-proposal':{S.proposals.push({id:uid('pr'),by:S.session,clientId:$('#pr-client').value,amount:ui.pAmt,tenure:ui.pTen,products:[...ui.cmp],at:Date.now()});save();route();toast('Proposal saved');return;}
+      case 'copy-proposal':{const c=client($('#pr-client').value);const lines=(ui.cmp||[]).map(i=>S.products.find(p=>p.id===i)).filter(Boolean).map(p=>`• ${bank(p.bankId).short} ${p.name}: ${p.rate}% · ${AED(emi(ui.pAmt,p.rate,ui.pTen))}/month`);copy(`Hi ${c.name.split(' ')[0]}, here are the best options for a loan of ${AED(ui.pAmt)} over ${ui.pTen/12} years:\n${lines.join('\n')}\nRates are indicative and subject to bank approval.`,'Proposal copied');return;}
+      case 'comm-paid':{e.stopPropagation();appById(id).commission.received=Date.now();save();route();toast('Commission marked as received');return;}
+      case 'add-broker':modal(`<h2>Add broker</h2><label class="field"><span>Full name</span><input id="nbName"></label><label class="field"><span>Brokerage</span><select id="nbBk">${BROKERAGES.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select></label><label class="field"><span>Role</span><select id="nbRole"><option value="broker">Mortgage broker</option><option value="manager">Brokerage manager</option></select></label><label class="field"><span>Mobile</span><input id="nbMobile"></label><label class="field"><span>Email</span><input id="nbEmail" type="email"></label><p class="small muted" style="margin:0">In the full CRM the broker gets an email invite to set their password.</p><div class="row"><button class="primary" data-act="nb-yes">Add broker</button><button data-act="close">Cancel</button></div>`);return;
+      case 'nb-yes':{const n=$('#nbName').value.trim();if(!n){toast('Enter the broker\'s name');return;}S.users.push({id:uid('u'),name:n,role:$('#nbRole').value,brokerage:$('#nbBk').value,mobile:$('#nbMobile').value.trim(),email:$('#nbEmail').value.trim(),license:'',notifyEmail:true,notifyDaily:true});save();closeModal();route();toast(n+' added');return;}
+      case 'daily-text':copy(dailyText(),'Daily update copied. Paste it into WhatsApp or email.');return;
+      case 'daily-csv':{const ev=dayEvents(ui.day);copy(['Time,Client,Bank,Broker,Type,Update,Current status',...ev.map(x=>[new Date(x.at).toLocaleTimeString('en-GB'),client(x.a.clientId).name,bank(x.a.bankId).short,user(x.a.brokerId).name,x.type,x.text,x.a.sub].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','))].join('\n'),ev.length+' rows copied as CSV');return;}
+      case 'cto-open':CT.open=CT.open===id?null:id;ctoResults();return;
+      case 'cto-tab':CT.tab=el.dataset.v;document.querySelectorAll('[data-act="cto-tab"]').forEach(b=>b.setAttribute('aria-selected',String(b===el)));ctoData();return;
+      case 'cto-manual':CT.source='manual';CT.months=CT.months.map(m=>({...m}));ctoData();ctoResults();return;
+      case 'cto-sample':CT.months=sampleMonths();ctoData();ctoResults();return;
+      case 'cto-clear':CT.months=[];ctoData();ctoResults();return;
+      case 'cto-addm':{const l=CT.months[CT.months.length-1];let key;if(l){const[y,m]=l.key.split('-').map(Number);const d=new Date(Date.UTC(y,m,1));key=d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');}else key=new Date().toISOString().slice(0,7);CT.months.push({key,total:0,own:0,loan:0,returns:0,cash:0,adbDaily:0,adbFixed:0,adbEnd:0,rc:0});ctoData();ctoResults();return;}
+      case 'cto-delm':CT.months.splice(+el.dataset.i,1);ctoData();ctoResults();return;
+      case 'cto-sampletx':CT.txns=prepTxns(sampleTxns());CT.source='statement';ctoRebuild();ctoData();ctoResults();toast('Sample statement loaded: '+CT.txns.length+' transactions');return;
+      case 'cto-cleartx':CT.txns=[];CT.daily={};CT.source='manual';CT.months=sampleMonths();ctoData();ctoResults();return;
+      case 'cto-resetrules':if(!isAdmin())return;S.rules=JSON.parse(JSON.stringify(SAMPLE_RULES));save();ctoData();ctoResults();toast('Bank rules reset');return;
+      case 'cto-copy':{const p=CT.p;copy(`CTO/ADB assessment\nShare ${p.share}% · EMIs ${AED(p.emis)} · Card limits ${AED(p.cards)} · Requested ${AED(p.loan)} over ${p.tenure} yrs\n\n`+ctoLast.map(r=>`${bank(r.bankId).short}: ${({ok:'Eligible',chk:'Check amount',no:'Not eligible'})[r.status]}${r.cto!==undefined?` | CTO ${fmt(r.cto)}/mo | ADB ${fmt(r.adb)} | Max loan ${fmt(r.maxLoan)}`:''}${r.reasons.length?' | '+r.reasons.join('; '):''}`).join('\n')+'\n\nIndicative only.','Summary copied');return;}
+      case 'cto-save':ctoSaveTo(CT.appId);return;
+    }
+  }
+  if(row&&!e.target.closest('button,input,select,a')) location.hash=row.dataset.href;
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&$('#modal').innerHTML){closeModal();return;}
+  if((e.key==='Enter'||e.key===' ')&&e.target.matches('tr[data-href],tr[data-act]')){e.preventDefault();e.target.click();}
+});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.id==='appSearch'){ui.q=t.value;appRows();return;}
+  if(t.dataset.ctop){CT.p[t.dataset.ctop]=+t.value||0;ctoResults();return;}
+  if(t.closest('#newApp')){naUpdate();return;}
+  if(t.closest('#calcForm')){calcUpdate();return;}
+  if(t.id==='pr-amt'||t.id==='pr-ten'){prRows();return;}
+});
+document.addEventListener('change',e=>{
+  const t=e.target,act=t.dataset.act;
+  if(t.dataset.f&&t.classList.contains('filter')){ui[t.dataset.f]=t.value;route();return;}
+  if(t.closest('#newApp')){naUpdate();return;}
+  if(t.closest('#calcForm')){calcUpdate();return;}
+  if(t.id==='dayPick'){ui.day=t.value||null;route();return;}
+  if(t.id==='ctoAttach'&&t.value){ctoSaveTo(t.value);return;}
+  if(t.dataset.cm!==undefined){const m=CT.months[+t.dataset.cm];if(t.dataset.f==='key'){if(t.value)m.key=t.value;CT.months.sort((a,b)=>a.key<b.key?-1:1);}else m[t.dataset.f]=Math.max(0,+t.value||0);ctoData();ctoResults();return;}
+  if(t.dataset.rule!==undefined){if(!isAdmin())return;const b=S.rules[+t.dataset.rule],f=t.dataset.f;b[f]=['dates','adb','basis'].includes(f)?t.value:(+t.value||0);save();ctoResults();if(f==='adb')ctoData();return;}
+  switch(act){
+    case 'move':{const a=appById(t.dataset.id),[st,sub]=t.value.split('|');a.stage=st;a.sub=sub;addTimeline(a,st,sub);a.messages.push({from:'sys',name:'System',channel:'broker',text:`Status changed to ${sub}`,at:Date.now()});save();route();toast('Moved to '+sub+'. The broker is notified.');return;}
+    case 'upload':{const fs=[...t.files];if(!fs.length)return;const a=appById(t.dataset.id),k=t.dataset.k;a.docs[k]=a.docs[k]||[];fs.forEach(f=>a.docs[k].push({file:f.name,at:Date.now(),by:S.session}));a.updated=Date.now();save();route();toast(fs.length+' file'+(fs.length>1?'s':'')+' added. The prototype keeps file names only.');return;}
+    case 'task':{const a=appById(t.dataset.id),k=a.tasks.find(x=>x.id===t.dataset.t);k.done=t.checked;save();route();return;}
+    case 'lead-stage':{const l=S.leads.find(x=>x.id===t.dataset.id);l.stage=t.value;save();route();return;}
+    case 'cmp':{ui.cmp=ui.cmp||[];if(t.checked)ui.cmp.push(t.dataset.id);else ui.cmp=ui.cmp.filter(x=>x!==t.dataset.id);route();return;}
+    case 'cto-txf':CT.txFilter=t.value;ctoData();return;
+    case 'cto-cat':CT.txns[+t.dataset.i].cat=t.value;ctoRebuild();ctoData();ctoResults();return;
+    case 'cto-csv':{const f=t.files[0];if(!f)return;const fr=new FileReader();fr.onload=()=>{try{const l=parseCsv(fr.result);if(!l.length)throw 0;CT.txns=prepTxns(l);CT.source='statement';ctoRebuild();ctoData();ctoResults();toast(l.length+' transactions imported');}catch(err){toast('Couldn\'t read that file. It needs date, description, debit, credit and balance columns.');}};fr.readAsText(f);return;}
+  }
+});
+document.addEventListener('submit',e=>{
+  e.preventDefault();const f=e.target;
+  if(f.id==='leadForm'){const v=id=>$(id).value.trim();if(!v('#lf-name')||!v('#lf-mobile')){toast('Enter a name and mobile number');return;}S.leads.push({id:uid('l'),name:v('#lf-name'),mobile:v('#lf-mobile'),source:v('#lf-source'),stage:'New',created:Date.now(),budget:+v('#lf-budget')||0,owner:$('#lf-owner').value||S.session,note:''});ui.leadForm=false;save();route();toast('Lead added');return;}
+  if(f.id==='profileForm'){const u=me();u.mobile=$('#pf-mobile').value.trim();u.email=$('#pf-email').value.trim();if($('#pf-license'))u.license=$('#pf-license').value.trim();u.notifyEmail=$('#pf-n1').checked;u.notifyDaily=$('#pf-n2').checked;save();toast('Profile saved');return;}
+  if(f.id==='msgForm'){const a=appById(f.dataset.id),txt=$('#msgText').value.trim();if(!txt)return;a.messages.push({from:isStaff()?'staff':'broker',name:me().name,channel:ui.chan,text:txt,at:Date.now()});a.updated=Date.now();save();route();setTimeout(()=>{const m=$('#msgs');if(m)m.scrollTop=m.scrollHeight;},0);return;}
+  if(f.id==='taskForm'){const a=appById(f.dataset.id),txt=$('#taskText').value.trim();if(!txt)return;a.tasks.push({id:uid('t'),text:txt,due:new Date($('#taskDue').value||Date.now()).getTime(),done:false});save();route();toast('Task added');return;}
+  if(f.id==='newApp'){
+    const mode=(e.submitter&&e.submitter.dataset.mode)||'submitted';
+    let cid=$('#na-client').value;
+    if(!cid){const n=$('#na-name').value.trim();if(!n){toast('Enter the client\'s name or pick an existing client');return;}
+      const c={id:uid('c'),name:n,mobile:$('#na-mobile').value.trim(),email:$('#na-email').value.trim(),nationality:$('#na-nat').value.trim(),residency:$('#na-res').value,employment:$('#na-emp').value,salary:+$('#na-salary').value||0,emis:+$('#na-emis').value||0,cards:+$('#na-cards').value||0,employer:'',company:'',dob:'',eidExpiry:new Date(Date.now()+365*DAY).toISOString().slice(0,10),passportExpiry:new Date(Date.now()+900*DAY).toISOString().slice(0,10),co:null};
+      if(!c.mobile||!c.email){toast('Enter the client\'s mobile and email. Banks need both.');return;}
+      S.clients.push(c);cid=c.id;}
+    const p=S.products.find(x=>x.id===$('#na-product').value),b=$('#na-bank').value;
+    const brokerId=$('#na-broker')?$('#na-broker').value:S.session, ma=$('#na-ma')?$('#na-ma').value:autoAdvisor();
+    const a={id:uid('a'),appId:newAppId(),clientId:cid,bankId:b,productId:p?p.id:'',amount:+$('#na-amount').value||0,property:+$('#na-prop').value||0,rate:p?p.rate:4.5,fixed:p?p.fixed:0,tenure:+$('#na-tenure').value||300,stl:$('#na-stl').value,type:p?p.type:'Conventional',transaction:$('#na-tx').value,caseType:$('#na-case').value,banker:'To be assigned',bankerManager:'To be assigned',advisor:ma,brokerId,submittedBy:S.session,source:$('#na-source').value,status:mode,stage:'preapproval',sub:'Documents collection',created:Date.now(),updated:Date.now(),unread:0,timeline:[{stage:'created',sub:'Application created',at:Date.now(),by:me().name},{stage:'preapproval',sub:'Documents collection',at:Date.now(),by:me().name}],docs:{},messages:mode==='submitted'?[{from:'sys',name:'System',channel:'broker',text:`Application submitted. ${ma} is your mortgage advisor.`,at:Date.now()}]:[],tasks:[],commission:{received:null},cto:null};
+    S.apps.push(a);
+    if(ui.convertLead){const l=S.leads.find(x=>x.id===ui.convertLead);if(l)l.stage='Converted';}
+    ui.convertLead=ui.prefillName=ui.prefillMobile=ui.prefillBudget=ui.prefillClient=ui.prefillBroker=null;
+    save();ui.detailTab='mortgage';ui.docTab='main';location.hash='#app-'+a.id;toast(mode==='draft'?'Draft saved':'Application submitted. '+ma+' is assigned.');
+  }
+});
+window.addEventListener('hashchange',()=>{ if(!location.hash.startsWith('#app-')){ui.detailTab='mortgage';ui.docTab='main';ui.more=false;} route(); if(location.hash==='#new-application') naUpdate(); if(location.hash==='#proposals') prRows(); });
+route(); if(location.hash==='#new-application') naUpdate(); if(location.hash==='#proposals') prRows();
+platformInit();
+})();
+</script>
+
+</body>
+</html>
