@@ -151,7 +151,7 @@ tr.link:hover td{background:var(--surface-2)}
 .tl.done i{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
 .tl.now i{border-color:var(--amber);color:var(--amber)}
 .tl i svg{width:12px;height:12px}
-.chat{display:grid;grid-template-rows:minmax(0,1fr) auto;height:560px;padding:0}
+.chat{display:grid;grid-template-rows:auto minmax(0,1fr) auto;height:560px;padding:0}
 .msgs{overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
 .msg{max-width:85%;padding:9px 12px;border-radius:12px;background:var(--surface-2);display:grid;gap:3px}
 .msg.me{align-self:flex-end;background:var(--accent-soft)}
@@ -196,6 +196,11 @@ tr.detailrow td{background:var(--surface-2);white-space:normal}
 .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
 .tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:9px 12px;color:var(--muted);font-weight:600}
 .tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.dropzone{position:relative;display:grid;justify-items:center;gap:6px;text-align:center;padding:26px 16px;border:1.5px dashed var(--line-2);border-radius:var(--r);background:var(--surface-2);cursor:pointer;color:var(--muted)}
+.dropzone b{color:var(--fg);font-weight:600}
+.dropzone:hover,.dropzone.over{border-color:var(--accent);background:var(--accent-soft)}
+.dropzone.busy{opacity:.7;cursor:progress}
+.dropzone input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .reasons{color:var(--muted);font-size:12px;white-space:normal;max-width:260px;margin-top:2px}
 
 /* Modal & toast */
@@ -733,9 +738,9 @@ function detailTab(a,c){
     :`<div class="empty"><span>No co-applicant on this application.</span><button data-act="add-co" data-id="${a.id}">${ic('plus')}Add co-applicant</button></div>`;
   if(ui.detailTab==='cto'){
     if(c.employment!=='Self-employed') return `<p class="muted" style="margin:0">CTO and ADB apply to self-employed applicants. ${esc(c.name)} is salaried, so banks assess income from the salary certificate.</p><a class="btn" href="#cto-${a.id}" style="justify-self:start">Open calculator anyway</a>`;
-    if(!a.cto) return `<p class="muted" style="margin:0">No CTO / ADB assessment yet. Upload the company bank statements to see which banks qualify and the maximum loan at each.</p><a class="btn primary" href="#cto-${a.id}" style="justify-self:start">${ic('bolt')}Run CTO / ADB assessment</a>`;
+    if(!a.cto) return `<p class="muted" style="margin:0">No CTO / ADB assessment yet. Upload the bank statements in Documents below, or in the calculator. CTO, ADB and each bank's result are then calculated automatically.</p><a class="btn primary" href="#cto-${a.id}" style="justify-self:start">${ic('bolt')}Run CTO / ADB assessment</a>`;
     const r=a.cto;
-    return `<div class="row spread"><span class="muted small">Saved ${rel(r.at)} · ${r.months} months of statements</span><a class="btn" href="#cto-${a.id}">Open calculator</a></div>
+    return `<div class="row spread"><span class="muted small">Calculated ${rel(r.at)} from ${r.files&&r.files.length?r.files.length+' statement'+(r.files.length>1?'s':''):'monthly figures'} · ${r.months} months</span><a class="btn" href="#cto-${a.id}">Open calculator</a></div>
       <div class="scroll bordered"><table class="tbl-sm"><thead><tr><th>Bank</th><th class="r">Eligible CTO</th><th class="r">ADB</th><th class="r">Max loan</th><th>Result</th></tr></thead><tbody>
       ${r.rows.map(x=>`<tr><td>${esc(bank(x.bankId).short)}</td><td class="r num">${fmt(x.cto)}</td><td class="r num">${fmt(x.adb)}</td><td class="r num"><b>${x.maxLoan?fmt(x.maxLoan):'—'}</b></td><td>${ctoPill(x.status)}</td></tr>`).join('')}</tbody></table></div>`;
   }
@@ -765,7 +770,7 @@ function docsTab(a,c){
   const ok=files(cat+':__other');
   return `<div class="row spread"><span class="muted">Total ${total} file${total===1?'':'s'} · ${got} of ${list.length} required items received</span>${total?`<button class="ghost" data-act="dl-all">${ic('download')}Download all</button>`:''}</div>
   <div class="doclist">${list.map(d=>{const k=cat+':'+d,has=files(k).length;return `<div class="doc ${has?'ok':'miss'}">${ic(has?'check':'file','class="ic"')}
-    <div class="nm"><div style="font-weight:500">${esc(d)}${has>1?` <span class="muted small">(${has} files)</span>`:''}</div>${has?fileLines(k):'<div class="small muted">Missing</div>'}</div>${up(k,d,has?'Add':'Upload')}</div>`;}).join('')}
+    <div class="nm"><div style="font-weight:500">${esc(d)}${has>1?` <span class="muted small">(${has} files)</span>`:''}</div>${has?fileLines(k):'<div class="small muted">Missing</div>'}${/bank statements/i.test(d)&&((cat==='main'&&c.employment==='Self-employed')||(cat==='co'&&c.co&&c.co.employment==='Self-employed'))?'<div class="small" style="color:var(--accent)">Upload PDF, Excel or CSV statements here and CTO / ADB is calculated automatically.</div>':''}</div>${up(k,d,has?'Add':'Upload')}</div>`;}).join('')}
     <div class="doc">${ic('file','class="ic"')}<div class="nm"><div style="font-weight:500">Other files</div>${ok.length?fileLines(cat+':__other'):'<div class="small muted">Anything else for this section</div>'}</div>${up(cat+':__other','other files','Add')}</div></div>`;
 }
 function timeline(a){
@@ -1033,27 +1038,147 @@ function sampleTxns(){
   }
   return out;
 }
-function classify(t){const d=t.desc.toUpperCase();if(t.credit<=0)return null;if(/OWN ACC|OWN ACCOUNT|SELF TRANSFER|TRF FROM OWN/.test(d))return'own';if(/LOAN|FINANCE DISB|DISBURS/.test(d))return'loan';if(/REVERSAL|REFUND|RETURN/.test(d))return'returns';if(/CASH DEP|CDM|CASH DEPOSIT/.test(d))return'cash';return'business';}
-const isRC=t=>t.debit>0&&/(CHQ|CHEQUE).*RETURN|RETURN.*(CHQ|CHEQUE)|BOUNCE/i.test(t.desc);
+function classify(t){const d=t.desc.toUpperCase();if(t.credit<=0)return null;if(/OWN ACC|OWN ACCOUNT|SELF TRANSFER|TRF FROM OWN|OWN TRANSFER/.test(d))return'own';if(/LOAN|FINANCE DISB|DISBURS/.test(d))return'loan';if(/REVERSAL|REFUND|RETURN/.test(d))return'returns';if(/CASH DEP|CDM|CASH DEPOSIT/.test(d))return'cash';return'business';}
+const isRC=t=>t.debit>0&&/(CHQ|CHEQUE).*RETURN|RETURN.*(CHQ|CHEQUE)|BOUNCE|UNPAID CHQ/i.test(t.desc);
 const CAT={business:'Business income',own:'Own-account transfer',loan:'Loan / finance',returns:'Refund / reversal',cash:'Cash deposit'};
-function prepTxns(l){l.forEach(t=>{t.cat=classify(t);t.rc=isRC(t);});const biz=l.filter(t=>t.cat==='business').map(t=>t.credit).sort((a,b)=>a-b);const med=biz.length?biz[Math.floor(biz.length/2)]:0;l.forEach(t=>{t.flag=t.credit>0&&med>0&&t.credit>3*med;});return l;}
+function prepTxns(l){l.forEach(t=>{if(!('cat' in t)||(t.credit>0&&!t.cat))t.cat=classify(t);t.rc=isRC(t);});const biz=l.filter(t=>t.cat==='business').map(t=>t.credit).sort((a,b)=>a-b);const med=biz.length?biz[Math.floor(biz.length/2)]:0;l.forEach(t=>{t.flag=t.credit>0&&med>0&&t.credit>3*med;});return l;}
 function fixedAvg(arr,dates){const pts=String(dates).split(',').map(s=>s.trim().toLowerCase()).filter(Boolean).map(s=>s==='end'?arr.length:Math.min(arr.length,Math.max(1,parseInt(s,10)||1)));return pts.length?pts.reduce((a,p)=>a+arr[p-1],0)/pts.length:mean(arr);}
 function monthsFromTxns(list){
   if(!list.length) return {months:[],daily:{}};
-  const sorted=list.slice().sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0),first=sorted[0];
+  const sorted=list.map((t,i)=>({t,i})).sort((a,b)=>a.t.date<b.t.date?-1:a.t.date>b.t.date?1:a.i-b.i).map(x=>x.t),first=sorted[0];
   let bal=first.balance-first.credit+first.debit;const eod={};sorted.forEach(t=>eod[t.date]=t.balance);
   const start=new Date(first.date.slice(0,7)+'-01T00:00:00Z'),lastD=new Date(sorted[sorted.length-1].date+'T00:00:00Z'),end=new Date(Date.UTC(lastD.getUTCFullYear(),lastD.getUTCMonth()+1,0));
   const daily={},months={};
   for(let t=start.getTime();t<=end.getTime();t+=DAY){const ds=new Date(t).toISOString().slice(0,10),k=ds.slice(0,7);if(eod[ds]!==undefined)bal=eod[ds];(daily[k]=daily[k]||[]).push(bal);}
-  sorted.forEach(t=>{const k=t.date.slice(0,7),m=months[k]=months[k]||{key:k,total:0,own:0,loan:0,returns:0,cash:0,rc:0};if(t.credit>0){m.total+=t.credit;if(t.cat!=='business')m[t.cat]+=t.credit;}if(t.rc)m.rc++;});
+  sorted.forEach(t=>{const k=t.date.slice(0,7),m=months[k]=months[k]||{key:k,total:0,own:0,loan:0,returns:0,cash:0,rc:0};if(t.credit>0){m.total+=t.credit;if(t.cat&&t.cat!=='business')m[t.cat]+=t.credit;}if(t.rc)m.rc++;});
   return {daily,months:Object.keys(daily).sort().map(k=>{const m=months[k]||{key:k,total:0,own:0,loan:0,returns:0,cash:0,rc:0},a=daily[k];m.adbDaily=mean(a);m.adbFixed=fixedAvg(a,'5,10,15,20,25,end');m.adbEnd=a[a.length-1];return m;})};
 }
+
+/* ---------- Statement reading: PDF, Excel, CSV ---------- */
+const LIBS={pdf:['https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js','https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'],xlsx:['https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js']};
+const loadedLibs={};
+function loadScript(src){return loadedLibs[src]||(loadedLibs[src]=new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=()=>res();s.onerror=()=>{delete loadedLibs[src];s.remove();rej(new Error('lib'));};document.head.appendChild(s);}));}
+async function needPdf(){await loadScript(LIBS.pdf[0]);await loadScript(LIBS.pdf[1]);const lib=window.pdfjsLib;if(!lib)throw new Error('lib');lib.GlobalWorkerOptions.workerSrc=LIBS.pdf[1];return lib;}
+async function needXlsx(){await loadScript(LIBS.xlsx[0]);if(!window.XLSX)throw new Error('lib');return window.XLSX;}
+async function pdfLines(buf,password){
+  const lib=await needPdf();
+  const doc=await lib.getDocument({data:buf,password:password||undefined,isEvalSupported:false,disableFontFace:true}).promise;
+  const lines=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const tc=await (await doc.getPage(p)).getTextContent();
+    const rows=[];
+    tc.items.forEach(it=>{const s=(it.str||'').trim();if(!s)return;const x=it.transform[4],y=it.transform[5];let r=rows.find(r=>Math.abs(r.y-y)<3);if(!r){r={y,items:[]};rows.push(r);}r.items.push({x,s});});
+    rows.sort((a,b)=>b.y-a.y).forEach(r=>{r.items.sort((a,b)=>a.x-b.x);lines.push(r.items.map(i=>i.s).join(' '));});
+  }
+  return lines;
+}
+const MON={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+const DATE_AT=/^(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}|\d{1,2}[\/\-. ](?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*[\/\-., ]+\d{2,4})\b/i;
+function isoDate(y,m,d){y=+y;m=+m;d=+d;if(y<100)y+=2000;if(m<1||m>12||d<1||d>31||y<2000||y>2100)return null;return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;}
+function parseDate(s){s=String(s).trim();let m;
+  if((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)))return isoDate(m[1],m[2],m[3]);
+  if((m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/)))return isoDate(m[3],m[2],m[1]);
+  if((m=s.match(/^(\d{1,2})[\/\-. ]([A-Za-z]{3,9})[\/\-., ]+(\d{2,4})/))){const mo=MON[m[2].slice(0,3).toLowerCase()];return mo?isoDate(m[3],mo,m[1]):null;}
+  return null;}
+function moneyVal(t){const m=String(t).replace(/^AED/i,'').match(/^(-)?\(?(\d{1,3}(?:,\d{3})+|\d+)\.(\d{1,2})\)?(CR|DR)?$/i);if(!m)return null;let v=parseFloat(m[2].replace(/,/g,'')+'.'+m[3]);if(m[1]||/^\(/.test(t))v=-v;return {v,tag:(m[4]||'').toUpperCase()};}
+const CREDIT_WORDS=/INWARD|DEPOSIT|TRANSFER FROM|CREDIT|SALARY|REFUND|REVERSAL|RECEIVED|PROCEEDS/i;
+function parseStatementLines(lines){
+  const recs=[];let opening=null,lastRec=null;
+  for(const raw of lines){
+    const line=String(raw).replace(/\s+/g,' ').trim();if(!line)continue;
+    const toks=line.split(' ');const money=[];let i=toks.length-1;
+    while(i>=0){const t=toks[i];if(/^(CR|DR)$/i.test(t)&&i>0&&moneyVal(toks[i-1])){const mv=moneyVal(toks[i-1]);mv.tag=t.toUpperCase();money.unshift(mv);i-=2;continue;}const mv=moneyVal(t);if(!mv)break;money.unshift(mv);i--;}
+    let rest=toks.slice(0,i+1).join(' ');
+    const dm=rest.match(DATE_AT);
+    if(!dm){
+      if(/opening balance|balance brought forward|brought forward|previous balance|balance b\/f/i.test(line)&&money.length){opening=money[money.length-1].v*(money[money.length-1].tag==='DR'?-1:1);continue;}
+      if(lastRec&&!money.length&&rest.length<90&&!/page \d|balance|total|statement|account|date/i.test(rest))lastRec.desc=(lastRec.desc+' '+rest).slice(0,140);
+      continue;
+    }
+    const date=parseDate(dm[1]);if(!date)continue;
+    rest=rest.slice(dm[0].length).trim();
+    const vd=rest.match(DATE_AT);if(vd)rest=rest.slice(vd[0].length).trim();
+    if(/opening balance|brought forward|balance b\/f/i.test(rest)){if(money.length)opening=money[money.length-1].v*(money[money.length-1].tag==='DR'?-1:1);continue;}
+    if(/closing balance|carried forward|balance c\/f/i.test(rest))continue;
+    if(money.length<2){lastRec=null;continue;}
+    const balM=money[money.length-1];const bal=balM.v*(balM.tag==='DR'?-1:1);
+    let cands=money.slice(0,-1).filter(x=>Math.abs(x.v)>0);if(!cands.length)continue;
+    const amtM=cands[cands.length-1];
+    lastRec={date,desc:rest||'Transaction',amt:Math.abs(amtM.v),tag:amtM.tag,neg:amtM.v<0,bal,two:cands.length>1?cands:null};
+    recs.push(lastRec);
+  }
+  if(recs.length>1&&recs[0].date>recs[recs.length-1].date)recs.reverse();
+  const txns=[];let prev=opening,mismatch=0;
+  recs.forEach((r,idx)=>{
+    let credit=null;
+    if(r.tag==='CR')credit=true;else if(r.tag==='DR')credit=false;
+    if(prev!==null&&prev!==undefined){const d=+(r.bal-prev).toFixed(2);if(Math.abs(d-r.amt)<0.02)credit=true;else if(Math.abs(d+r.amt)<0.02)credit=false;else{if(credit===null)credit=d>0;mismatch++;}}
+    else if(credit===null){const nx=recs[idx+1];if(nx){const d=+(nx.bal-r.bal).toFixed(2);credit=r.neg?false:CREDIT_WORDS.test(r.desc);void d;}else credit=CREDIT_WORDS.test(r.desc)&&!r.neg;}
+    txns.push({date:r.date,desc:r.desc.slice(0,140),credit:credit?r.amt:0,debit:credit?0:r.amt,balance:r.bal});
+    prev=r.bal;
+  });
+  return {txns,mismatch};
+}
+function csvRows(text){return text.split(/\r?\n/).filter(l=>l.trim()).map(line=>{const o=[];let c='',q=false;for(const ch of line){if(ch==='"'){q=!q;continue;}if(ch===','&&!q){o.push(c);c='';}else c+=ch;}o.push(c);return o.map(s=>s.trim());});}
+function cellDate(v){if(v instanceof Date&&!isNaN(v))return isoDate(v.getFullYear(),v.getMonth()+1,v.getDate());if(typeof v==='number'&&v>20000&&v<80000){const d=new Date(Math.round((v-25569)*DAY));return isoDate(d.getUTCFullYear(),d.getUTCMonth()+1,d.getUTCDate());}return parseDate(v);}
+function cellNum(v){if(typeof v==='number')return v;const s=String(v||'').replace(/AED|,|\s/gi,'');if(!s)return null;const neg=/^\(.*\)$/.test(s)||/^-/.test(s)||/DR$/i.test(s);const n=parseFloat(s.replace(/[()\-]|CR$|DR$/gi,''));return isNaN(n)?null:(neg?-n:n);}
+function rowsToTxns(rows){
+  const hi=rows.findIndex(r=>{const h=r.map(c=>String(c).toLowerCase());return h.some(c=>c.includes('date'))&&h.some(c=>/balance|debit|credit|amount|withdraw|deposit/.test(c));});
+  if(hi<0)return {txns:[],msg:'Couldn\'t find the column headings. The file needs date, description, debit / credit (or amount) and balance columns.'};
+  const head=rows[hi].map(c=>String(c).toLowerCase().trim());const col=n=>head.findIndex(h=>n.some(x=>h.includes(x)));
+  const iD=col(['transaction date','txn date','posting date','date']),iT=col(['desc','narration','details','particular','remark','reference']),iDr=col(['debit','withdraw','dr amount']),iCr=col(['credit','deposit','cr amount']),iA=col(['amount']),iB=col(['balance']);
+  const txns=[];
+  rows.slice(hi+1).forEach(r=>{const date=cellDate(r[iD]);if(!date)return;let cr=iCr>=0?Math.abs(cellNum(r[iCr])||0):0,dr=iDr>=0?Math.abs(cellNum(r[iDr])||0):0;
+    if(iCr<0&&iDr<0&&iA>=0){const a=cellNum(r[iA])||0;if(a>=0)cr=a;else dr=-a;}
+    if(!cr&&!dr)return;txns.push({date,desc:String(iT>=0?r[iT]:'Transaction').slice(0,140),credit:+cr.toFixed(2),debit:+dr.toFixed(2),balance:iB>=0?(cellNum(r[iB])??NaN):NaN});});
+  if(txns.length>1&&txns[0].date>txns[txns.length-1].date)txns.reverse();
+  let msg='';if(txns.some(t=>isNaN(t.balance))){let b=0;txns.forEach(t=>{b+=t.credit-t.debit;t.balance=+b.toFixed(2);});msg='No balance column, so ADB is estimated from a running total. Upload a statement with balances for an accurate ADB.';}
+  return {txns,msg};
+}
+function detectBank(text){const T=String(text).toUpperCase();const b=BANKS.find(b=>T.includes(b.name.toUpperCase()))||BANKS.find(b=>new RegExp('\\b'+b.short+'\\b').test(T));return b?b.short:'';}
+async function readStatement(f,password){
+  const rec={name:f.name,size:f.size,status:'error',msg:'',txns:[],mismatch:0,bank:'',file:f};
+  try{
+    const ext=(f.name.split('.').pop()||'').toLowerCase();
+    if(ext==='pdf'){
+      const lines=await pdfLines(await f.arrayBuffer(),password);
+      if(!lines.join('').trim()) rec.msg='This PDF is a scanned image with no text. Download the e-statement from online banking, or upload the Excel / CSV version.';
+      else{const r=parseStatementLines(lines);rec.txns=r.txns;rec.mismatch=r.mismatch;rec.bank=detectBank(lines.slice(0,60).join(' '));if(!r.txns.length)rec.msg='No transactions found. This statement layout isn\'t supported yet: upload the Excel / CSV version instead.';}
+    }else if(ext==='xlsx'||ext==='xls'){
+      const X=await needXlsx();const wb=X.read(await f.arrayBuffer(),{type:'array',cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];
+      const r=rowsToTxns(X.utils.sheet_to_json(ws,{header:1,raw:true,defval:''}));rec.txns=r.txns;rec.msg=r.msg;
+    }else if(ext==='csv'||ext==='txt'){const r=rowsToTxns(csvRows(await f.text()));rec.txns=r.txns;rec.msg=r.msg;}
+    else rec.msg='Upload a PDF, Excel (.xlsx) or CSV statement.';
+    if(rec.txns.length){rec.status='ok';prepTxns(rec.txns);const ds=rec.txns.map(t=>t.date).sort();rec.period=dstr(new Date(ds[0]+'T12:00:00').getTime())+' – '+dstr(new Date(ds[ds.length-1]+'T12:00:00').getTime());}
+  }catch(e){
+    if(e&&e.name==='PasswordException'){rec.status='password';rec.msg=password?'That password didn\'t work. Try again.':'This PDF is password-protected. Enter its password to read it.';}
+    else rec.msg=e&&e.message==='lib'?'Couldn\'t load the statement reader. Check the internet connection and try again.':'Couldn\'t read this file. Check it opens on your computer, then upload it again.';
+  }
+  return rec;
+}
+
+/* ---------- Calculator state ---------- */
 let CT=null;
-function ctoInit(appId){
-  if(CT&&CT.appId===appId) return;
+function ctoInit(appId,force){
+  if(CT&&CT.appId===appId&&!force) return;
   const a=appId?appById(appId):null, c=a?client(a.clientId):null;
-  CT={appId,tab:'monthly',open:null,txFilter:'excluded',source:'manual',txns:[],daily:{},months:a&&a.cto&&a.cto.monthsData?a.cto.monthsData:sampleMonths(),
+  CT={appId,tab:'monthly',open:null,txFilter:'excluded',source:'manual',txns:[],daily:{},months:[],files:[],busy:false,
       p:{share:100,emis:c?c.emis:6500,cards:c?c.cards:60000,loan:a?a.amount:2000000,tenure:a?Math.round(a.tenure/12):25}};
+  if(a&&a.cto){
+    if(a.cto.source==='statement'&&a.cto.files&&a.cto.files.length){
+      CT.files=a.cto.files.map(f=>({name:f.name,size:f.size,bank:f.bank||'',period:f.period||'',mismatch:f.mismatch||0,status:'ok',msg:'',txns:prepTxns((f.tx||[]).map(r=>({date:r[0],desc:r[1],credit:r[2],debit:r[3],balance:r[4],cat:r[5]})))}));
+      CT.source='statement';ctoRebuild();
+    } else CT.months=(a.cto.monthsData||[]).map(m=>({...m}));
+  }
+}
+function ctoRebuild(){
+  const recs=CT.files.filter(r=>r.status==='ok'&&r.txns.length);
+  CT.txns=recs.flatMap(r=>r.txns.map(t=>{t.file=r.name;return t;}));
+  const M={},D={};
+  recs.forEach(rec=>{const r=monthsFromTxns(rec.txns);
+    r.months.forEach(m=>{const t=M[m.key]||(M[m.key]={key:m.key,total:0,own:0,loan:0,returns:0,cash:0,rc:0,adbDaily:0,adbFixed:0,adbEnd:0});['total','own','loan','returns','cash','rc','adbDaily','adbFixed','adbEnd'].forEach(f=>t[f]+=m[f]||0);});
+    Object.entries(r.daily).forEach(([k,a])=>{const d=D[k]||(D[k]=new Array(a.length).fill(0));a.forEach((v,i)=>d[i]+=v);});});
+  CT.months=Object.keys(M).sort().map(k=>M[k]);CT.daily=D;
 }
 function ctoCalc(b){
   const p=CT.p,all=CT.months,res={rule:b,bankId:b.id,reasons:[]};
@@ -1062,7 +1187,7 @@ function ctoCalc(b){
   res.period=mLabel(use[0].key)+' – '+mLabel(use[use.length-1].key);
   res.avgTotal=mean(use.map(m=>m.total));res.avgExcl=mean(use.map(m=>m.own+m.loan+m.returns+m.cash*(1-b.cash/100)));
   res.cto=mean(use.map(m=>m.total-m.own-m.loan-m.returns-m.cash*(1-b.cash/100)));
-  res.adb=b.adb==='daily'?mean(use.map(m=>m.adbDaily)):b.adb==='monthEnd'?mean(use.map(m=>m.adbEnd)):(CT.source==='statement'?mean(use.map(m=>fixedAvg(CT.daily[m.key],b.dates))):mean(use.map(m=>m.adbFixed)));
+  res.adb=b.adb==='daily'?mean(use.map(m=>m.adbDaily)):b.adb==='monthEnd'?mean(use.map(m=>m.adbEnd)):(CT.source==='statement'?mean(use.map(m=>CT.daily[m.key]?fixedAvg(CT.daily[m.key],b.dates):m.adbFixed)):mean(use.map(m=>m.adbFixed)));
   res.rc=use.reduce((a,m)=>a+(+m.rc||0),0);
   res.incCto=res.cto*b.ctoPct/100;res.incAdb=res.adb*b.adbPct/100;
   res.gross=b.basis==='cto'?res.incCto:b.basis==='adb'?res.incAdb:b.basis==='min'?Math.min(res.incCto,res.incAdb):Math.max(res.incCto,res.incAdb);
@@ -1075,32 +1200,69 @@ function ctoCalc(b){
   if(res.reasons.length)res.status='no';else if(p.loan>0&&res.maxLoan<p.loan){res.status='chk';res.reasons.push(`Short of requested loan by ${fmt(p.loan-res.maxLoan)}`);}else res.status='ok';
   return res;
 }
+function ctoCompute(){const ord={ok:0,chk:1,no:2};const res=S.rules.map(ctoCalc);res.sort((a,b)=>ord[a.status]-ord[b.status]||(b.maxLoan||0)-(a.maxLoan||0));ctoLast=res;return res;}
 const ctoPill=s=>({ok:'<span class="pill" style="--c:var(--green)">Eligible</span>',chk:'<span class="pill" style="--c:var(--amber)">Check amount</span>',no:'<span class="pill" style="--c:var(--red)">Not eligible</span>'}[s]);
 const ADBL={daily:'Daily average',fixed:'Fixed dates',monthEnd:'Month-end'},BASL={cto:'CTO only',adb:'ADB only',min:'Lower of CTO / ADB',max:'Higher of CTO / ADB'};
 let ctoLast=[];
+
+/* ---------- Calculator page ---------- */
 function vCto(appId){
   const a=appId&&appById(appId); ctoInit(a?appId:null);
   const c=a?client(a.clientId):null;
-  after.push(()=>{ctoResults();ctoData();});
+  after.push(()=>{renderUpload();ctoResults();ctoData();});
   return `
   ${a?`<div class="crumbs"><a href="#applications">Applications</a><span>›</span><a href="#app-${a.id}">${esc(c.name)} - ${esc(bank(a.bankId).short)}</a><span>›</span><b>CTO / ADB</b></div>`:''}
-  <div class="row spread"><div><h1>CTO &amp; ADB calculator</h1><div class="muted">Self-employed income from bank statements, calculated with each bank's own rules.</div></div>
+  <div class="row spread"><div><h1>CTO &amp; ADB calculator</h1><div class="muted">Upload the bank statements. Credit turnover, average daily balance and each bank's result are calculated automatically.</div></div>
    <div class="row"><button data-act="cto-copy">Copy summary</button>${a?`<button class="primary" data-act="cto-save">Save to application</button>`:`<select class="filter" id="ctoAttach" aria-label="Attach to application"><option value="">Attach to application…</option>${visibleApps().filter(x=>client(x.clientId).employment==='Self-employed').map(x=>`<option value="${x.id}">${esc(client(x.clientId).name)} - ${bank(x.bankId).short}</option>`).join('')}</select>`}</div></div>
-  <section class="card"><div class="row spread"><h2>${c?esc(c.name)+(c.company?' · '+esc(c.company):''):'Client & liabilities'}</h2><span class="small muted">${a?'Liabilities and loan prefilled from the application':'Example figures'}</span></div>
+  <section class="card" id="ctoUpload"></section>
+  <section class="card"><div class="row spread"><h2>${c?esc(c.name)+(c.company?' · '+esc(c.company):''):'Client & liabilities'}</h2><span class="small muted">${a?'Prefilled from the application':'Example figures'}</span></div>
    <div class="grid-form">
     ${[['share','Ownership share %'],['emis','Existing monthly EMIs (AED)'],['cards','Credit card limits (AED)'],['loan','Loan requested (AED)'],['tenure','Tenure (years)']].map(([k,l])=>`<label class="field"><span>${l}</span><input class="r num" type="number" min="0" data-ctop="${k}" value="${CT.p[k]}"></label>`).join('')}
    </div></section>
   <section class="card"><div class="row spread"><h2>Bank comparison</h2><span class="small muted">Select a bank to see how it was calculated</span></div>
    <div class="ctokpis" id="ctoKpis"></div><div class="scroll bordered"><table class="tbl-sm" id="ctoRes"></table></div>
    <p class="small muted" style="margin:0">Liabilities = existing EMIs + 5% of credit card limits. Max loan uses each bank's DBR cap, rate and maximum tenure. It doesn't apply LTV limits.</p></section>
-  <section class="card"><div class="tabs" role="tablist">${[['monthly','Monthly figures'],['txns','Statement transactions'],['rules','Bank rules']].map(([k,l])=>`<button role="tab" data-act="cto-tab" data-v="${k}" aria-selected="${CT.tab===k}">${l}</button>`).join('')}</div><div id="ctoData" style="display:grid;gap:12px"></div></section>`;
+  <section class="card"><div class="tabs" role="tablist">${[['monthly','Monthly figures'],['txns','Transactions'],['rules','Bank rules']].map(([k,l])=>`<button role="tab" data-act="cto-tab" data-v="${k}" aria-selected="${CT.tab===k}">${l}</button>`).join('')}</div><div id="ctoData" style="display:grid;gap:12px"></div></section>`;
+}
+function renderUpload(){
+  const box=$('#ctoUpload');if(!box)return;
+  const st={ok:['var(--green)','Read'],password:['var(--amber)','Needs password'],error:['var(--red)',"Couldn't read"]};
+  box.innerHTML=`<div class="row spread"><h2>Bank statements</h2>${CT.files.length?'<button class="ghost" data-act="cto-clearfiles">Remove all</button>':''}</div>
+   <label class="dropzone ${CT.busy?'busy':''}" id="ctoDrop">${ic('upload','style="width:26px;height:26px"')}
+     <b>${CT.busy?'Reading statements…':'Drop bank statements here, or choose files'}</b>
+     <span class="small muted">PDF e-statements, Excel or CSV · 6 to 12 months · statements from several accounts are added together</span>
+     <input type="file" multiple accept=".pdf,.xlsx,.xls,.csv" data-act="cto-files" ${CT.busy?'disabled':''} aria-label="Upload bank statements"></label>
+   ${CT.files.length?`<div class="list">${CT.files.map((f,i)=>{const s=st[f.status];return `<div class="li" style="align-items:center"><div style="min-width:0"><div class="row" style="gap:8px">${ic('file','style="width:16px;height:16px;color:var(--muted)"')}<b style="font-weight:500;overflow-wrap:anywhere">${esc(f.name)}</b><span class="pill" style="--c:${s[0]}">${s[1]}</span></div>
+     <div class="small muted">${f.status==='ok'?`${f.bank?esc(f.bank)+' · ':''}${esc(f.period||'')} · ${f.txns.length} transactions${f.mismatch?` · <span style="color:var(--amber)">${f.mismatch} line${f.mismatch>1?'s':''} didn't match the running balance, check the Transactions tab</span>`:''}`:''}${f.msg?`<div style="color:${f.status==='ok'?'var(--muted)':s[0]}">${esc(f.msg)}</div>`:''}</div>
+     ${f.status==='password'?`<div class="row" style="gap:6px;margin-top:6px"><input type="password" id="pw-${i}" placeholder="PDF password" style="width:200px" aria-label="Password for ${esc(f.name)}"><button data-act="cto-unlock" data-i="${i}">Unlock</button></div>`:''}</div>
+     <button class="linkbtn small" data-act="cto-rmfile" data-i="${i}" style="color:var(--muted)">Remove</button></div>`;}).join('')}</div>`
+   :`<div class="row"><span class="small muted">No statements yet.</span><button data-act="cto-sampletx">Try with a sample statement</button><a class="btn ghost" href="https://github.com/anandipre-imp/Recycling/tree/claude/youthful-thompson-750u2w/mortgage-crm/sample-statements" target="_blank" rel="noopener">Download sample PDFs</a><button class="ghost" data-act="cto-manualstart">Enter monthly figures by hand</button></div>`}`;
+}
+async function ctoProcessFiles(files,opts={}){
+  const list=[...files].filter(f=>!CT.files.some(x=>x.name===f.name&&x.size===f.size));
+  if(!list.length){toast('Those statements are already added');return [];}
+  CT.busy=true;renderUpload();
+  const recs=[];for(const f of list) recs.push(await readStatement(f));
+  CT.busy=false;CT.files.push(...recs);CT.source='statement';ctoRebuild();
+  const ok=recs.filter(r=>r.status==='ok').length;
+  if(CT.appId&&ok&&!opts.noSave) ctoStore(CT.appId);
+  if($('#ctoUpload')){renderUpload();ctoData();ctoResults();}
+  if(ok) toast(`${ok} statement${ok>1?'s':''} read: ${CT.months.length} months, ${CT.txns.length} transactions${CT.appId?'. Saved to the application.':''}`);
+  else if(recs.some(r=>r.status==='password')) toast('Enter the PDF password to read it');
+  else toast(recs[0]&&recs[0].msg||'No transactions found');
+  return recs;
 }
 function ctoResults(){
   if(!$('#ctoRes')) return;
-  const res=S.rules.map(ctoCalc),ord={ok:0,chk:1,no:2};
-  res.sort((a,b)=>ord[a.status]-ord[b.status]||(b.maxLoan||0)-(a.maxLoan||0)); ctoLast=res;
-  const m=CT.months,m12=m.slice(-12),el=res.filter(r=>r.status!=='no'),best=el[0];
-  $('#ctoKpis').innerHTML=[['Statements',m.length+' months',m.length?mLabel(m[0].key)+' – '+mLabel(m[m.length-1].key):'None'],['Avg CTO, all exclusions',fmt(mean(m12.map(x=>x.total-x.own-x.loan-x.returns-x.cash))),'AED / month'],['Daily ADB',fmt(mean(m12.map(x=>x.adbDaily))),'AED'],['Banks that qualify',res.filter(r=>r.status==='ok').length+' of '+res.length,el.length-res.filter(r=>r.status==='ok').length+' more at a lower amount'],['Highest max loan',best?fmt(best.maxLoan):'—',best?bank(best.bankId).short:'No bank qualifies']]
+  const m=CT.months;
+  if(!m.length){
+    $('#ctoKpis').innerHTML=`<div><span class="label">Statements</span><b>None yet</b><span class="small muted">Upload above to calculate</span></div>`;
+    $('#ctoRes').innerHTML=`<tbody><tr><td><div class="empty">${ic('bolt','style="width:26px;height:26px"')}<span>Upload the client's bank statements. Each bank's CTO, ADB, income and maximum loan appear here automatically.</span></div></td></tr></tbody>`;
+    ctoLast=[];return;
+  }
+  const res=ctoCompute();
+  const m12=m.slice(-12),el=res.filter(r=>r.status!=='no'),best=el[0];
+  $('#ctoKpis').innerHTML=[['Statements',m.length+' months',mLabel(m[0].key)+' – '+mLabel(m[m.length-1].key)],['Avg CTO, all exclusions',fmt(mean(m12.map(x=>x.total-x.own-x.loan-x.returns-x.cash))),'AED / month'],['Daily ADB',fmt(mean(m12.map(x=>x.adbDaily))),'AED'],['Banks that qualify',res.filter(r=>r.status==='ok').length+' of '+res.length,el.length-res.filter(r=>r.status==='ok').length+' more at a lower amount'],['Highest max loan',best?fmt(best.maxLoan):'—',best?bank(best.bankId).short:'No bank qualifies']]
     .map(([l,v,h])=>`<div><span class="label">${l}</span><b>${v}</b><span class="small muted">${h}</span></div>`).join('');
   let h=`<thead><tr><th>Bank</th><th class="r">Eligible CTO / mo</th><th class="r">ADB</th><th class="r">Income considered</th><th class="r">Max EMI</th><th class="r">Max loan</th><th>Status</th></tr></thead><tbody>`;
   res.forEach(r=>{const b=r.rule,open=CT.open===b.id;
@@ -1117,22 +1279,20 @@ function ctoData(){
   const box=$('#ctoData'); if(!box) return;
   if(CT.tab==='monthly'){
     const ro=CT.source==='statement';
-    let h=ro?`<div class="notice info">These figures come from the uploaded statement. Re-categorise transactions to change them. <button data-act="cto-manual" style="margin-left:8px">Edit by hand instead</button></div>`
-      :`<div class="row spread"><span class="muted">${CT.appId&&appById(CT.appId).cto?'Saved figures.':'Demo figures. Replace them with the client\'s statement figures, or upload the statement.'}</span><div class="row"><button data-act="cto-addm">Add month</button><button data-act="cto-sample">Reload sample</button><button data-act="cto-clear">Clear</button></div></div>`;
+    let h=ro?`<div class="notice info">Calculated from the uploaded statements. To change a figure, re-categorise a transaction in the Transactions tab. <button data-act="cto-manual" style="margin-left:8px">Edit by hand instead</button></div>`
+      :`<div class="row spread"><span class="muted">${CT.months.length?'Figures entered by hand.':'No figures yet. Upload statements above, or add months by hand.'}</span><div class="row"><button data-act="cto-addm">Add month</button><button data-act="cto-sample">Load example figures</button>${CT.months.length?'<button data-act="cto-clear">Clear</button>':''}</div></div>`;
     h+=`<div class="scroll bordered"><table class="tbl-sm"><thead><tr><th>Month</th>${MCOLS.map(c=>`<th class="r">${c[1]}</th>`).join('')}<th class="r">Eligible CTO*</th>${ro?'':'<th></th>'}</tr></thead><tbody>`;
     if(!CT.months.length) h+=`<tr><td colspan="12" class="muted">No months yet.</td></tr>`;
     CT.months.forEach((m,i)=>{h+=`<tr><td>${ro?mLabel(m.key):`<input type="month" data-cm="${i}" data-f="key" value="${m.key}" style="min-width:140px">`}</td>`+MCOLS.map(([f])=>`<td class="r num">${ro?fmt(m[f]):`<input class="r num" type="number" min="0" data-cm="${i}" data-f="${f}" value="${Math.round(m[f])}">`}</td>`).join('')+`<td class="r num"><b>${fmt(m.total-m.own-m.loan-m.returns-m.cash)}</b></td>${ro?'':`<td><button data-act="cto-delm" data-i="${i}">Remove</button></td>`}</tr>`;});
     box.innerHTML=h+`</tbody></table></div><p class="small muted" style="margin:0">*Excludes every flagged credit, including all cash. Each bank's figure above follows that bank's own cash rule.</p>`;
   } else if(CT.tab==='txns'){
-    let h=`<div class="row spread"><label class="field" style="min-width:220px"><span>Upload statement (CSV)</span><input type="file" data-act="cto-csv" accept=".csv,text/csv"></label><div class="row"><button data-act="cto-sampletx">Load sample statement</button>${CT.txns.length?'<button data-act="cto-cleartx">Clear statement</button>':''}</div></div>
-      <div class="small muted">Columns needed: date, description, debit, credit, balance. In production, a reader for each bank's PDF statement layout replaces this step.</div>`;
-    if(!CT.txns.length){box.innerHTML=h+`<p class="muted" style="margin:0">No statement loaded.</p>`;return;}
+    if(!CT.txns.length){box.innerHTML=`<p class="muted" style="margin:0">Upload statements to see every transaction and how it was categorised.</p>`;return;}
     let rows=CT.txns.map((t,i)=>({t,i}));
     if(CT.txFilter==='excluded') rows=rows.filter(({t})=>(t.credit>0&&(t.cat!=='business'||t.flag))||t.rc); else if(CT.txFilter==='credits') rows=rows.filter(({t})=>t.credit>0);
-    h+=`<label class="field" style="max-width:260px"><span>Show</span><select data-act="cto-txf"><option value="excluded"${CT.txFilter==='excluded'?' selected':''}>Excluded and flagged credits</option><option value="credits"${CT.txFilter==='credits'?' selected':''}>All credits</option><option value="all"${CT.txFilter==='all'?' selected':''}>All transactions</option></select></label>
-     <div class="scroll bordered" style="max-height:440px"><table class="tbl-sm"><thead><tr><th>Date</th><th>Description</th><th class="r">Credit</th><th class="r">Debit</th><th class="r">Balance</th><th>Category</th><th></th></tr></thead><tbody>
-     ${rows.map(({t,i})=>`<tr><td>${t.date}</td><td>${esc(t.desc)}</td><td class="r num">${t.credit?fmt(t.credit):''}</td><td class="r num">${t.debit?fmt(t.debit):''}</td><td class="r num">${fmt(t.balance)}</td><td>${t.credit>0?`<select data-act="cto-cat" data-i="${i}">${Object.keys(CAT).map(c=>`<option value="${c}"${t.cat===c?' selected':''}>${CAT[c]}</option>`).join('')}</select>`:(t.rc?'<span class="pill" style="--c:var(--red)">Returned cheque</span>':'')}</td><td>${t.flag?'<span class="small" style="color:var(--amber);font-weight:600">Large one-off, check source</span>':''}</td></tr>`).join('')||'<tr><td colspan="7" class="muted">Nothing to show.</td></tr>'}</tbody></table></div>`;
-    box.innerHTML=h;
+    const multi=CT.files.filter(f=>f.status==='ok').length>1;
+    box.innerHTML=`<div class="row spread"><label class="field" style="max-width:260px"><span>Show</span><select data-act="cto-txf"><option value="excluded"${CT.txFilter==='excluded'?' selected':''}>Excluded and flagged credits</option><option value="credits"${CT.txFilter==='credits'?' selected':''}>All credits</option><option value="all"${CT.txFilter==='all'?' selected':''}>All transactions</option></select></label><span class="small muted">${CT.txns.length} transactions · change a category and every figure updates</span></div>
+     <div class="scroll bordered" style="max-height:440px"><table class="tbl-sm"><thead><tr><th>Date</th>${multi?'<th>Statement</th>':''}<th>Description</th><th class="r">Credit</th><th class="r">Debit</th><th class="r">Balance</th><th>Category</th><th></th></tr></thead><tbody>
+     ${rows.map(({t,i})=>`<tr><td>${t.date}</td>${multi?`<td class="small muted">${esc(t.file||'')}</td>`:''}<td style="white-space:normal;min-width:220px">${esc(t.desc)}</td><td class="r num">${t.credit?fmt(t.credit):''}</td><td class="r num">${t.debit?fmt(t.debit):''}</td><td class="r num">${fmt(t.balance)}</td><td>${t.credit>0?`<select data-act="cto-cat" data-i="${i}">${Object.keys(CAT).map(c=>`<option value="${c}"${t.cat===c?' selected':''}>${CAT[c]}</option>`).join('')}</select>`:(t.rc?'<span class="pill" style="--c:var(--red)">Returned cheque</span>':'')}</td><td>${t.flag?'<span class="small" style="color:var(--amber);font-weight:600">Large one-off, check source</span>':''}</td></tr>`).join('')||'<tr><td colspan="8" class="muted">Nothing to show.</td></tr>'}</tbody></table></div>`;
   } else {
     box.innerHTML=`<div class="notice"><b>Sample values for testing only.</b> They aren't the banks' real policies. Replace each row with the bank's current CTO / ADB policy. Rules are shared across every application in the CRM.${isAdmin()?'':' Only admins can edit them.'}</div>
      ${isAdmin()?'<div class="row"><button data-act="cto-resetrules">Reset to sample rules</button></div>':''}
@@ -1141,25 +1301,30 @@ function ctoData(){
      </tbody></table></div>`;
   }
 }
-function ctoRebuild(){const r=monthsFromTxns(CT.txns);CT.months=r.months;CT.daily=r.daily;}
-function ctoSaveTo(appId){
-  const a=appById(appId); if(!a) return;
-  a.cto={at:Date.now(),months:CT.months.length,monthsData:CT.months.map(m=>({...m})),rows:ctoLast.map(r=>({bankId:r.bankId,status:r.status,cto:r.cto||0,adb:r.adb||0,maxLoan:r.maxLoan||0}))};
-  const best=ctoLast.find(r=>r.status!=='no');
-  addTimeline(a,a.stage,a.sub,'CTO / ADB assessment saved');
-  a.timeline.pop(); a.updated=Date.now();
-  a.messages.push({from:'sys',name:'System',channel:'internal',text:`CTO / ADB assessment saved. ${ctoLast.filter(r=>r.status==='ok').length} banks qualify${best?`, highest max loan ${AED(best.maxLoan)} (${bank(best.bankId).short})`:''}.`,at:Date.now(),internal:true});
-  save(); ui.detailTab='cto'; location.hash='#app-'+appId; toast('Assessment saved to application');
+function ctoStore(appId){
+  const a=appById(appId); if(!a) return null;
+  const res=ctoCompute();
+  a.cto={at:Date.now(),source:CT.source,months:CT.months.length,monthsData:CT.months.map(m=>({...m})),
+    files:CT.source==='statement'?CT.files.filter(f=>f.status==='ok').map(f=>({name:f.name,size:f.size,bank:f.bank||'',period:f.period||'',mismatch:f.mismatch||0,tx:f.txns.map(t=>[t.date,String(t.desc).slice(0,80),t.credit,t.debit,t.balance,t.cat||null])})):[],
+    rows:res.map(r=>({bankId:r.bankId,status:r.status,cto:r.cto||0,adb:r.adb||0,maxLoan:r.maxLoan||0}))};
+  const best=res.find(r=>r.status!=='no');
+  a.updated=Date.now();
+  a.messages.push({from:'sys',name:'System',channel:'internal',text:`CTO / ADB calculated from ${CT.source==='statement'?CT.files.filter(f=>f.status==='ok').length+' statement(s)':'monthly figures'}: ${res.filter(r=>r.status==='ok').length} banks qualify${best?`, highest max loan ${AED(best.maxLoan)} (${bank(best.bankId).short})`:''}.`,at:Date.now()});
+  save(); return a;
 }
-function parseCsv(text){
-  const split=line=>{const o=[];let c='',q=false;for(const ch of line){if(ch==='"'){q=!q;continue;}if(ch===','&&!q){o.push(c);c='';}else c+=ch;}o.push(c);return o.map(s=>s.trim());};
-  const lines=text.split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)return[];
-  const head=split(lines[0]).map(h=>h.toLowerCase()),idx=n=>head.findIndex(h=>n.some(x=>h.includes(x)));
-  const iD=idx(['date']),iT=idx(['desc','narration','details','particular']),iDr=idx(['debit','withdraw']),iCr=idx(['credit','deposit']),iB=idx(['balance']);
-  if([iD,iT,iDr,iCr,iB].some(i=>i<0)) throw new Error('cols');
-  const num=s=>+String(s||'').replace(/[^0-9.\-]/g,'')||0;
-  const dt=s=>{let m;if((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)))return`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;if((m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/))){const y=m[3].length===2?'20'+m[3]:m[3];return`${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;}return null;};
-  return lines.slice(1).map(split).map(c=>({date:dt(c[iD]||''),desc:c[iT]||'',debit:Math.abs(num(c[iDr])),credit:Math.abs(num(c[iCr])),balance:num(c[iB])})).filter(t=>t.date);
+function ctoSaveTo(appId){
+  if(!CT.months.length){toast('Upload statements or enter monthly figures first');return;}
+  if(!ctoStore(appId)) return;
+  ui.detailTab='cto'; location.hash='#app-'+appId; toast('Assessment saved to application');
+}
+async function ctoFromDocuments(appId,files){
+  const stmt=[...files].filter(f=>/\.(pdf|xlsx|xls|csv)$/i.test(f.name));
+  if(!stmt.length) return;
+  ctoInit(appId,true);
+  toast('Reading the statement to calculate CTO / ADB…');
+  const recs=await ctoProcessFiles(stmt);
+  if(recs.some(r=>r.status==='ok')){ ui.detailTab='cto'; if(location.hash==='#app-'+appId) route(); }
+  else if(recs.some(r=>r.status==='password')) toast('This statement is password-protected. Open the CTO / ADB calculator to enter the password.');
 }
 
 /* ============ shared feedback (platform) ============ */
@@ -1275,15 +1440,21 @@ document.addEventListener('click',e=>{
       case 'cto-clear':CT.months=[];ctoData();ctoResults();return;
       case 'cto-addm':{const l=CT.months[CT.months.length-1];let key;if(l){const[y,m]=l.key.split('-').map(Number);const d=new Date(Date.UTC(y,m,1));key=d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');}else key=new Date().toISOString().slice(0,7);CT.months.push({key,total:0,own:0,loan:0,returns:0,cash:0,adbDaily:0,adbFixed:0,adbEnd:0,rc:0});ctoData();ctoResults();return;}
       case 'cto-delm':CT.months.splice(+el.dataset.i,1);ctoData();ctoResults();return;
-      case 'cto-sampletx':CT.txns=prepTxns(sampleTxns());CT.source='statement';ctoRebuild();ctoData();ctoResults();toast('Sample statement loaded: '+CT.txns.length+' transactions');return;
-      case 'cto-cleartx':CT.txns=[];CT.daily={};CT.source='manual';CT.months=sampleMonths();ctoData();ctoResults();return;
+      case 'cto-sampletx':{const tx=prepTxns(sampleTxns());const ds=tx.map(t=>t.date).sort();CT.files.push({name:'Sample statement (demo data).pdf',size:-1,bank:'',status:'ok',msg:'Example data to show how it works',mismatch:0,txns:tx,period:dstr(new Date(ds[0]+'T12:00:00').getTime())+' – '+dstr(new Date(ds[ds.length-1]+'T12:00:00').getTime())});CT.source='statement';ctoRebuild();renderUpload();ctoData();ctoResults();toast('Sample statement read: '+CT.months.length+' months, '+CT.txns.length+' transactions');return;}
+      case 'cto-clearfiles':CT.files=[];CT.txns=[];CT.daily={};CT.months=[];CT.source='manual';renderUpload();ctoData();ctoResults();return;
+      case 'cto-rmfile':{CT.files.splice(+el.dataset.i,1);if(CT.files.some(f=>f.status==='ok'))ctoRebuild();else{CT.txns=[];CT.daily={};CT.months=[];CT.source='manual';}renderUpload();ctoData();ctoResults();return;}
+      case 'cto-unlock':{const i=+el.dataset.i,rec=CT.files[i],pw=($('#pw-'+i)||{}).value||'';if(!pw){toast('Enter the PDF password');return;}el.disabled=true;el.textContent='Unlocking…';readStatement(rec.file,pw).then(n=>{CT.files[i]=n;if(n.status==='ok'){CT.source='statement';ctoRebuild();if(CT.appId)ctoStore(CT.appId);toast('Statement unlocked and read');}renderUpload();ctoData();ctoResults();});return;}
+      case 'cto-manualstart':{CT.tab='monthly';CT.source='manual';document.querySelectorAll('[data-act="cto-tab"]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v==='monthly')));ctoData();const d=$('#ctoData');if(d)d.scrollIntoView({behavior:'smooth',block:'start'});return;}
       case 'cto-resetrules':if(!isAdmin())return;S.rules=JSON.parse(JSON.stringify(SAMPLE_RULES));save();ctoData();ctoResults();toast('Bank rules reset');return;
-      case 'cto-copy':{const p=CT.p;copy(`CTO/ADB assessment\nShare ${p.share}% · EMIs ${AED(p.emis)} · Card limits ${AED(p.cards)} · Requested ${AED(p.loan)} over ${p.tenure} yrs\n\n`+ctoLast.map(r=>`${bank(r.bankId).short}: ${({ok:'Eligible',chk:'Check amount',no:'Not eligible'})[r.status]}${r.cto!==undefined?` | CTO ${fmt(r.cto)}/mo | ADB ${fmt(r.adb)} | Max loan ${fmt(r.maxLoan)}`:''}${r.reasons.length?' | '+r.reasons.join('; '):''}`).join('\n')+'\n\nIndicative only.','Summary copied');return;}
+      case 'cto-copy':{if(!ctoLast.length){toast('Upload statements first');return;}const p=CT.p;copy(`CTO/ADB assessment\nShare ${p.share}% · EMIs ${AED(p.emis)} · Card limits ${AED(p.cards)} · Requested ${AED(p.loan)} over ${p.tenure} yrs\n\n`+ctoLast.map(r=>`${bank(r.bankId).short}: ${({ok:'Eligible',chk:'Check amount',no:'Not eligible'})[r.status]}${r.cto!==undefined?` | CTO ${fmt(r.cto)}/mo | ADB ${fmt(r.adb)} | Max loan ${fmt(r.maxLoan)}`:''}${r.reasons.length?' | '+r.reasons.join('; '):''}`).join('\n')+'\n\nIndicative only.','Summary copied');return;}
       case 'cto-save':ctoSaveTo(CT.appId);return;
     }
   }
   if(row&&!e.target.closest('button,input,select,a')) location.hash=row.dataset.href;
 });
+['dragenter','dragover'].forEach(ev=>document.addEventListener(ev,e=>{const z=e.target.closest&&e.target.closest('.dropzone');if(z){e.preventDefault();z.classList.add('over');}}));
+document.addEventListener('dragleave',e=>{const z=e.target.closest&&e.target.closest('.dropzone');if(z&&!z.contains(e.relatedTarget))z.classList.remove('over');});
+document.addEventListener('drop',e=>{const z=e.target.closest&&e.target.closest('.dropzone');if(!z)return;e.preventDefault();z.classList.remove('over');if(CT&&!CT.busy&&e.dataTransfer&&e.dataTransfer.files.length)ctoProcessFiles(e.dataTransfer.files);});
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&$('#modal').innerHTML){closeModal();return;}
   if((e.key==='Enter'||e.key===' ')&&e.target.matches('tr[data-href],tr[data-act]')){e.preventDefault();e.target.click();}
@@ -1307,13 +1478,13 @@ document.addEventListener('change',e=>{
   if(t.dataset.rule!==undefined){if(!isAdmin())return;const b=S.rules[+t.dataset.rule],f=t.dataset.f;b[f]=['dates','adb','basis'].includes(f)?t.value:(+t.value||0);save();ctoResults();if(f==='adb')ctoData();return;}
   switch(act){
     case 'move':{const a=appById(t.dataset.id),[st,sub]=t.value.split('|');a.stage=st;a.sub=sub;addTimeline(a,st,sub);a.messages.push({from:'sys',name:'System',channel:'broker',text:`Status changed to ${sub}`,at:Date.now()});save();route();toast('Moved to '+sub+'. The broker is notified.');return;}
-    case 'upload':{const fs=[...t.files];if(!fs.length)return;const a=appById(t.dataset.id),k=t.dataset.k;a.docs[k]=a.docs[k]||[];fs.forEach(f=>a.docs[k].push({file:f.name,at:Date.now(),by:S.session}));a.updated=Date.now();save();route();toast(fs.length+' file'+(fs.length>1?'s':'')+' added. The prototype keeps file names only.');return;}
+    case 'upload':{const fs=[...t.files];if(!fs.length)return;const a=appById(t.dataset.id),k=t.dataset.k;a.docs[k]=a.docs[k]||[];fs.forEach(f=>a.docs[k].push({file:f.name,at:Date.now(),by:S.session}));a.updated=Date.now();save();route();const cl=client(a.clientId);if(/bank statements/i.test(k)&&(cl.employment==='Self-employed'||(k.startsWith('co:')&&cl.co&&cl.co.employment==='Self-employed'))){ctoFromDocuments(a.id,fs);}else toast(fs.length+' file'+(fs.length>1?'s':'')+' added. The prototype keeps file names only.');return;}
     case 'task':{const a=appById(t.dataset.id),k=a.tasks.find(x=>x.id===t.dataset.t);k.done=t.checked;save();route();return;}
     case 'lead-stage':{const l=S.leads.find(x=>x.id===t.dataset.id);l.stage=t.value;save();route();return;}
     case 'cmp':{ui.cmp=ui.cmp||[];if(t.checked)ui.cmp.push(t.dataset.id);else ui.cmp=ui.cmp.filter(x=>x!==t.dataset.id);route();return;}
     case 'cto-txf':CT.txFilter=t.value;ctoData();return;
     case 'cto-cat':CT.txns[+t.dataset.i].cat=t.value;ctoRebuild();ctoData();ctoResults();return;
-    case 'cto-csv':{const f=t.files[0];if(!f)return;const fr=new FileReader();fr.onload=()=>{try{const l=parseCsv(fr.result);if(!l.length)throw 0;CT.txns=prepTxns(l);CT.source='statement';ctoRebuild();ctoData();ctoResults();toast(l.length+' transactions imported');}catch(err){toast('Couldn\'t read that file. It needs date, description, debit, credit and balance columns.');}};fr.readAsText(f);return;}
+    case 'cto-files':{const fs=[...t.files];t.value='';if(fs.length)ctoProcessFiles(fs);return;}
   }
 });
 document.addEventListener('submit',e=>{
