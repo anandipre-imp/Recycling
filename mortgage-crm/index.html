@@ -1080,43 +1080,48 @@ function parseDate(s){s=String(s).trim();let m;
   if((m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/)))return isoDate(m[3],m[2],m[1]);
   if((m=s.match(/^(\d{1,2})[\/\-. ]([A-Za-z]{3,9})[\/\-., ]+(\d{2,4})/))){const mo=MON[m[2].slice(0,3).toLowerCase()];return mo?isoDate(m[3],mo,m[1]):null;}
   return null;}
-function moneyVal(t){const s=String(t).replace(/^(AED|INR|USD|EUR|Rs\.?)/i,'');const m=s.match(/^(-)?\(?(\d{1,3}(?:,\d{2,3})+|\d+)\.(\d{1,2})\)?(CR|DR)?$/i);if(!m)return null;let v=parseFloat(m[2].replace(/,/g,'')+'.'+m[3]);if(m[1]||/^\(/.test(s))v=-v;return {v,tag:(m[4]||'').toUpperCase()};}
+function moneyVal(t){const s=String(t).replace(/^(AED|INR|USD|EUR|Rs\.?)/i,'');const m=s.match(/^([-+])?\(?(\d{1,3}(?:,\d{2,3})+|\d+)\.(\d{1,2})\)?(CR|DR)?$/i);if(!m)return null;let v=parseFloat(m[2].replace(/,/g,'')+'.'+m[3]);if(m[1]==='-'||/^\(/.test(s))v=-v;return {v,tag:(m[4]||'').toUpperCase(),plus:m[1]==='+'};}
 const CREDIT_WORDS=/INWARD|DEPOSIT|TRANSFER FROM|CREDIT|SALARY|REFUND|REVERSAL|RECEIVED|PROCEEDS|INT\.?PD|INTEREST/i;
 const HEADER_LINE=l=>/date/i.test(l)&&/(balance|particular|description|narration|details|debit|credit|withdraw)/i.test(l);
 const FOOTER_LINE=l=>/^(page\s*\d|\d+\s*of\s*\d+|total|closing balance|opening balance|statement of|end of statement|this is a (system|computer))/i.test(l);
 function parseStatementLines(lines){
-  const recs=[];let opening=null,lastRec=null,pending=[],mode=null;
+  const recs=[];let opening=null,lastRec=null,gap=[],kBefore=null,skipArabic=false;
+  const ARABIC=/[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+  const flush=()=>{if(lastRec&&gap.length)lastRec.desc=(lastRec.desc+' '+gap.join(' ')).slice(0,200);gap=[];};
   for(const raw of lines){
     const line=String(raw).replace(/\s+/g,' ').trim();if(!line)continue;
-    if(HEADER_LINE(line)&&!DATE_AT.test(line)){pending=[];continue;}
-    const toks=line.split(' ');
+    if(HEADER_LINE(line)&&!DATE_AT.test(line)){flush();skipArabic=true;continue;}
+    if(skipArabic&&ARABIC.test(line)&&!DATE_AT.test(line)){skipArabic=false;continue;}
+    skipArabic=false;
     const dm=line.match(DATE_AT);
     const body=dm?line.slice(dm[0].length).trim():line;
     const btoks=body?body.split(' '):[];
-    // money tokens anywhere in the line (CR/DR suffix may be a separate token); trailing codes after the balance are ignored
     const money=[];let firstMoney=-1;
     btoks.forEach((t,i)=>{const mv=moneyVal(t);if(mv){if(/^(CR|DR)$/i.test(btoks[i+1]||''))mv.tag=btoks[i+1].toUpperCase();money.push(mv);if(firstMoney<0)firstMoney=i;}});
-    if(/opening balance|balance brought forward|brought forward|previous balance|balance b\/f/i.test(line)){if(money.length)opening=money[money.length-1].v*(money[money.length-1].tag==='DR'?-1:1);pending=[];continue;}
+    if(/opening balance|balance brought forward|brought forward|previous balance|balance b\/f/i.test(line)){if(money.length)opening=money[money.length-1].v*(money[money.length-1].tag==='DR'?-1:1);gap=[];continue;}
     if(!dm){
       if(money.length||FOOTER_LINE(line))continue;
-      if(mode==='after'&&lastRec)lastRec.desc=(lastRec.desc+' '+line).slice(0,160);
-      else if(line.length<120)pending.push(line);
+      if(line.length<120)gap.push(line);
       continue;
     }
     const date=parseDate(dm[1]);if(!date)continue;
     let desc=(firstMoney>=0?btoks.slice(0,firstMoney):btoks).join(' ');
     const vd=desc.match(DATE_AT);if(vd)desc=desc.slice(vd[0].length).trim();
     if(/closing balance|carried forward|balance c\/f/i.test(desc))continue;
-    if(money.length<2){lastRec=null;continue;}
-    if(mode===null)mode=pending.length?'before':'after';
-    if(mode==='before'){desc=(pending.join(' ')+' '+desc).trim();}
-    pending=[];
+    if(money.length<2){continue;}
+    // lines between two transactions: the last k belong to the next one (k = how many came before the first transaction), the rest to the previous one
+    let prefix;
+    if(kBefore===null){kBefore=Math.min(gap.length,3);prefix=gap.slice(gap.length-kBefore);}
+    else{const k=Math.min(kBefore,gap.length);if(lastRec&&gap.length-k>0)lastRec.desc=(lastRec.desc+' '+gap.slice(0,gap.length-k).join(' ')).slice(0,200);prefix=gap.slice(gap.length-k);}
+    gap=[];
+    desc=(prefix.join(' ')+' '+desc).trim();
     const balM=money[money.length-1];const bal=balM.v*(balM.tag==='DR'?-1:1);
     const cands=money.slice(0,-1).filter(x=>Math.abs(x.v)>0);if(!cands.length)continue;
     const amtM=cands[cands.length-1];
-    lastRec={date,desc:desc||'Transaction',amt:Math.abs(amtM.v),tag:amtM.tag,neg:amtM.v<0,bal};
+    lastRec={date,desc:desc||'Transaction',amt:Math.abs(amtM.v),tag:amtM.plus?'CR':amtM.tag,neg:amtM.v<0,bal};
     recs.push(lastRec);
   }
+  flush();
   if(recs.length>1&&recs[0].date>recs[recs.length-1].date)recs.reverse();
   const txns=[];let prev=opening,mismatch=0;
   recs.forEach((r,idx)=>{
@@ -1124,7 +1129,7 @@ function parseStatementLines(lines){
     if(r.tag==='CR')credit=true;else if(r.tag==='DR')credit=false;
     if(prev!==null&&prev!==undefined){const d=+(r.bal-prev).toFixed(2);if(Math.abs(d-r.amt)<0.02)credit=true;else if(Math.abs(d+r.amt)<0.02)credit=false;else{if(credit===null)credit=d>0;mismatch++;}}
     else if(credit===null){const nx=recs[idx+1];if(nx){const d=+(nx.bal-nx.amt-r.bal).toFixed(2),d2=+(nx.bal+nx.amt-r.bal).toFixed(2);credit=r.neg?false:CREDIT_WORDS.test(r.desc);void d;void d2;}else credit=CREDIT_WORDS.test(r.desc)&&!r.neg;}
-    txns.push({date:r.date,desc:r.desc.slice(0,160),credit:credit?r.amt:0,debit:credit?0:r.amt,balance:r.bal});
+    txns.push({date:r.date,desc:r.desc.slice(0,200),credit:credit?r.amt:0,debit:credit?0:r.amt,balance:r.bal});
     prev=r.bal;
   });
   return {txns,mismatch};
@@ -1145,6 +1150,13 @@ function rowsToTxns(rows){
   let msg='';if(txns.some(t=>isNaN(t.balance))){let b=0;txns.forEach(t=>{b+=t.credit-t.debit;t.balance=+b.toFixed(2);});msg='No balance column, so ADB is estimated from a running total. Upload a statement with balances for an accurate ADB.';}
   return {txns,msg};
 }
+const normName=x=>String(x).toUpperCase().replace(/[^A-Z0-9]/g,'');
+function detectHolder(lines){
+  const hi=lines.findIndex(l=>HEADER_LINE(l));const head=(hi>0?lines.slice(0,hi):lines.slice(0,40));
+  for(const l of head){const t=String(l).replace(/[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFF]+/g,' ').trim();
+    const m=t.match(/^([A-Z0-9&.,' \-]{3,80}?\b(?:L\.?\s?L\.?\s?C|LLC|FZ[- ]?LLC|FZE|FZCO|FZ|LIMITED|LTD|TRADING|ESTABLISHMENT|EST\.?|PVT)\b[A-Z0-9.\- ]*)/i);
+    if(m&&!/statement|bank|account|branch|address/i.test(m[1])){const n=normName(m[1].replace(/\b(L\.?\s?L\.?\s?C|LLC|FZ[- ]?LLC|FZE|FZCO|FZ|LIMITED|LTD|PVT)\b.*$/i,''));if(n.length>=6)return {name:m[1].trim(),key:n};}}
+  return null;}
 function detectBank(text){const T=String(text).toUpperCase();const b=BANKS.find(b=>T.includes(b.name.toUpperCase()))||BANKS.find(b=>new RegExp('\\b'+b.short+'\\b').test(T));return b?b.short:'';}
 async function readStatement(f,password){
   const rec={name:f.name,size:f.size,status:'error',msg:'',txns:[],mismatch:0,bank:'',file:f};
@@ -1153,7 +1165,7 @@ async function readStatement(f,password){
     if(ext==='pdf'){
       const lines=await pdfLines(await f.arrayBuffer(),password);
       if(!lines.join('').trim()) rec.msg='This PDF is a scanned image with no text. Download the e-statement from online banking, or upload the Excel / CSV version.';
-      else{const r=parseStatementLines(lines);rec.txns=r.txns;rec.mismatch=r.mismatch;rec.bank=detectBank(lines.slice(0,60).join(' '));if(!r.txns.length)rec.msg='No transactions found. This statement layout isn\'t supported yet: upload the Excel / CSV version instead.';}
+      else{const r=parseStatementLines(lines);rec.txns=r.txns;rec.mismatch=r.mismatch;rec.bank=detectBank(lines.slice(0,60).join(' '));const h=detectHolder(lines);if(h){let n=0;rec.txns.forEach(t=>{if(t.credit>0&&normName(t.desc).includes(h.key)){t.cat='own';n++;}});if(n)rec.msg=`${n} credit${n>1?'s':''} came from accounts in the account holder's own name, so they're treated as own-account transfers and left out of CTO. Change them in the Transactions tab if that's wrong.`;}if(!r.txns.length)rec.msg='No transactions found. This statement layout isn\'t supported yet: upload the Excel / CSV version instead.';}
     }else if(ext==='xlsx'||ext==='xls'){
       const X=await needXlsx();const wb=X.read(await f.arrayBuffer(),{type:'array',cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];
       const r=rowsToTxns(X.utils.sheet_to_json(ws,{header:1,raw:true,defval:''}));rec.txns=r.txns;rec.msg=r.msg;
